@@ -1,4 +1,4 @@
-class microrna:
+class Microrna:
     def __init__(self, seq):
         self.seq = seq
 

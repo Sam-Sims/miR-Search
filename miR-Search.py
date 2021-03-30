@@ -1,5 +1,5 @@
 from Bio import SeqIO
-import sequence
+import sequence_handler
 import re
 
 def read_mir_testing(test):
@@ -14,18 +14,6 @@ def read_3utr_testing(test):
         print(fasta_sequence.seq)
         return fasta_sequence.seq
 
-
-def read_mir():
-    for fasta_sequence in SeqIO.parse(open('test-data/hsa-miR-451a.fasta'), 'fasta'):
-        print("Reading", fasta_sequence.seq)
-        return fasta_sequence.seq
-
-
-def read_3utr():
-    for fasta_sequence in SeqIO.parse("test-data/OSR1.fasta", "fasta"):
-        print("Reading 3' UTR region... ")
-        print(fasta_sequence.seq)
-        return fasta_sequence.seq
 
 
 def search_6mer(mir, utr):
@@ -99,16 +87,15 @@ def search_8mers(mir, utr):
 
 
 def main():
-    mir_to_search = read_mir()
-    seq = sequence.microrna(mir_to_search)
-    search_mir = seq.clean_mir()
-    search_mir = seq.my_reverse_complement()
-    search_mir = seq.back_trans() # back translate after reverse complement or A are swapped to T
-    print(search_mir)
-    print("Done!")
-    print("Final target site search string is: ", search_mir)
+    print("---miR-Search---")
+    fp = sequence_handler.FASTAParse()
+    input_mir = fp.read_mir("test-data/hsa-miR-451a.fasta")
 
-    utr = read_3utr_testing("test-utr-8mer.fasta")
+    mir = sequence_handler.Microrna(input_mir)
+    mir.auto_process()
+    search_mir = str(mir.mir_seq)
+
+    utr = fp.read_3utr("test-data/OSR1.fasta")
 
     sixmer = search_6mer(str(search_mir), str(utr))
     sevenmerm8 = search_7merm8(str(search_mir), str(utr))
