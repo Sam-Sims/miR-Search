@@ -112,12 +112,14 @@ class PYMart:
                 f.close()
 
     def clean_utr(self, file):
+        rm_list = []
         print("Cleaning UTR file...")
         print("Removing failed records...")
         for seq_record in SeqIO.parse(file, "fasta"):
             #print(seq_record.seq)
             if "failed" in str(seq_record.seq):
                 print(seq_record.name, " may of failed - removing")
+                rm_list.append(seq_record.name)
             else:
                 with open("temp.fasta", "a") as f:
                     SeqIO.write(seq_record, f, "fasta")
@@ -126,6 +128,7 @@ class PYMart:
         for seq_record in SeqIO.parse("temp.fasta", "fasta"):
             if seq_record.seq == "Sequenceunavailable[success]" or seq_record.seq == "Sequenceunavailable":
                 print("No 3'UTR for", seq_record.name, " - removing")
+                rm_list.append(str(seq_record.name))
             else:
                 print("3'UTR sequence found for ", seq_record.name)
                 with open("temp_2.fasta", "a") as f:
@@ -150,5 +153,9 @@ class PYMart:
         os.remove("temp.fasta")
         os.remove("temp_2.fasta")
         print("FASTA file cleaned!")
+        with open("removed_during_cleaning.txt", "a") as f:
+            for i in rm_list:
+                f.write("%s\n" % i)
+        f.close()
 
 
