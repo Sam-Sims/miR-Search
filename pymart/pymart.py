@@ -1,25 +1,24 @@
-import requests, sys
+import requests, sys, os, re
 from xml.dom import minidom
 import pandas as pd
 from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing as mp
 from Bio import SeqIO
-import os
-import re
 
 
 class PYMart:
-    def __init__(self):
+    def __init__(self, server, genelist, output_file):
         manager = mp.Manager()
         self._q = manager.Queue()
-        self._server = "http://www.ensembl.org/biomart/martservice?query="
-        self._biomart_master_path = "mart_export_test.csv" # mart export needs to have ensembl IDs in first column.
+        self._server = server
+        self.gene_list = genelist # mart export needs to have ensembl IDs in first column.
         self._completed_path = "utr_check/completed.csv"
+        self.output_file = output_file
 
-    def download_mart(self):
-        df = pd.read_csv(self._biomart_master_path)
+    def download_mart(self, thread_num):
+        df = pd.read_csv(self.gene_list)
         ids = df[df.columns[0]]
-        num_threads = 50
+        num_threads = thread_num
         pool = ThreadPool(num_threads)
         pool.apply_async(self._listener) # spawn listener to watch for queue activity
         pool.map(self._get_utr, ids)
@@ -29,7 +28,7 @@ class PYMart:
 
     def _listener(self):
         print("Listening...")
-        with open("utr_test.fasta", 'a') as f:
+        with open(self.output_file, 'a') as f:
             while 1:
                 m = self._q.get()
                 if m == 'kill':
@@ -81,7 +80,7 @@ class PYMart:
         with open(self._completed_path, "a") as f:
             f.write("gene, \n")
         f.close()
-        for record in SeqIO.parse("utr_test.fasta", "fasta"):
+        for record in SeqIO.parse(self.output_file, "fasta"):
             with open(self._completed_path, "a") as f:
                 f.write(record.id + "\n")
             f.close()
@@ -89,7 +88,7 @@ class PYMart:
 
     def _check(self):
         print("Comparing...")
-        human_genes = pd.read_csv(self._biomart_master_path)
+        human_genes = pd.read_csv(self.gene_list)
         completed = pd.read_csv(self._completed_path)
         completed['gene'] = completed['gene'].str[:15]
         completed.drop(completed.columns[1], axis=1, inplace=True)
@@ -103,7 +102,7 @@ class PYMart:
         print("Failed gene IDs stored in utr_check/failed.csv")
 
     def _check_completion_stamp(self):
-        for seq_record in SeqIO.parse("utr_test.fasta", "fasta"):
+        for seq_record in SeqIO.parse(self.output_file, "fasta"):
             #print(seq_record.seq)
             if "failed" in str(seq_record.seq):
                 print(seq_record.name, " may of failed")
@@ -126,7 +125,7 @@ class PYMart:
         print("Done!")
         print("Removing records with no 3'UTR sequence...")
         for seq_record in SeqIO.parse("temp.fasta", "fasta"):
-            if seq_record.seq == "Sequenceunavailable[success]" or seq_record.seq == "Sequenceunavailable":
+            if seq_record.seq == "Sequenceunavailable[success]" or seq_record.seq == "Sequenceunavailable" or seq_record.seq == "Sequenceunavailablekilled":
                 print("No 3'UTR for", seq_record.name, " - removing")
                 rm_list.append(str(seq_record.name))
             else:
@@ -142,10 +141,10 @@ class PYMart:
         temp_new_file_string = re.sub("\[(?:[^\[\]]+|)]", "", file_string) # regex to find any [success] markers and remove them
         print("Done!")
         print("Final clean...")
-        new_file_string = temp_new_file_string.replace(">killed", "")
+        new_file_string = temp_new_file_string.replace("killed", "")
         print("Done!")
         print("Writing cleaned fasta file as cleaned_utr.fasta")
-        with open("cleaned_utr.fasta", "a") as f:
+        with open("cleaned %s " % self.output_file, "a") as f:
             f.write(new_file_string)
         f.close()
         print("Done!")

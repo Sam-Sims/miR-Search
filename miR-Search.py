@@ -1,7 +1,7 @@
 from Bio import SeqIO
 import sequence_handler
-import re
 from pymart import pymart
+import argparse
 
 
 def read_mir_testing(test):
@@ -18,78 +18,34 @@ def read_3utr_testing(test):
         return fasta_sequence.seq
 
 
-def search_6mer(mir, utr):
-    _mir = mir[1:7]
-    print("Searching for 6mer: ", _mir)
-    seed_locations = []
-    for i in re.finditer(_mir, utr):
-        _start = i.start()
-        _end = i.end()
-        _seed_locations = [_start, _end]
-        seed_locations.append(_seed_locations)
-    if not seed_locations:
-        return False, seed_locations # still need to return list although empty
-    else:
-        return True, seed_locations # return tuple - first always bool indicating if seed site exsists, second a list of locations within the utr - if no locations list will be empty
+def print_menu():
+    print('''\
+ ---------------------------------------------------------
+            _ ____      ____                      _     
+  _ __ ___ (_)  _ \    / ___|  ___  __ _ _ __ ___| |__  
+ | '_ ` _ \| | |_) |___\___ \ / _ \/ _` | '__/ __| '_ \ 
+ | | | | | | |  _ <_____|__) |  __/ (_| | | | (__| | | |
+ |_| |_| |_|_|_| \_\   |____/ \___|\__,_|_|  \___|_| |_|
+ 
+ ---------------------------------------------------------                                                
+    ''')
+    print("Please make a selection:")
+    print("1. Download 3'UTR regions")
+    print("2. Run Search")
 
-
-def search_7merm8(mir, utr): # 7mer-m8 = posistions 2-7 + match at posistion 8
-    _mir = mir[:7] # remove pos 1
-    print("Searching for 7mer-m8: ", _mir)
-    seed_locations = []
-    is_7mera1 = False
-    for i in re.finditer(_mir, utr):
-        _start = i.start()
-        _end = i.end()
-        _seed_locations = [_start, _end]
-        seed_locations.append(_seed_locations)
-        _end_check_a = _end + 1
-        if utr[_start:_end_check_a].endswith('A'):
-            is_7mera1 = True
+def check_menu_choice(ans):
+    try:
+        if ans == '1':
+            run_pymart()
+        elif ans == '2':
+            run_search()
         else:
-            is_7mera1 = False
-    if not seed_locations: # if list empty - no 7mers return false
-        return False, seed_locations  # still need to return list although empty
-    else: # if list has items - i.e 7mers found
-        if is_7mera1: # check if A at pos1 in miRNA - if false return false as this would be 7mer-a1
-            return False, seed_locations  # still need to return list although empty
-        else: # Else must be a 7mer-m8
-            return True, seed_locations
+            print('Error, a valid answer was not supplied!')
+    except Exception as e:
+        print('An error occurred' + str(e))
 
 
-def search_7mera1(mir, utr): # probably ineffecient searching again when already searched for 7mers - LOOK IN TO
-    _mir = mir[1:7] + "A" # pos 1 always an A then look at sites 2-7
-    print("Searching for 7mer-a1: ", _mir)
-    seed_locations = []
-    is_7mera1 = False
-    for i in re.finditer(_mir, utr):
-        _start = i.start()
-        _end = i.end()
-        _seed_locations = [_start, _end]
-        seed_locations.append(_seed_locations)
-    if not seed_locations:
-        return False, seed_locations
-    else:
-        return True, seed_locations
-
-
-def search_8mers(mir, utr):
-    _mir = mir[:7] + "A" # look at sites 1-7
-    print("Searching for 8mer: ", _mir)
-    seed_locations = []
-    for i in re.finditer(_mir, utr):
-        _start = i.start()
-        _end = i.end()
-        _seed_locations = [_start, _end]
-        seed_locations.append(_seed_locations)
-    if not seed_locations:
-        return False, seed_locations  # still need to return list although empty
-    else:
-        return True, seed_locations
-
-
-def main():
-    print("---miR-Search---")
+def run_search():
     fp = sequence_handler.FASTAParse()
     input_mir = fp.read_mir("test-data/hsa-miR-451a.fasta")
 
@@ -100,17 +56,11 @@ def main():
 
     so = sequence_handler.MicroRNASearch(utr)
 
-    pm = pymart.PYMart()
-    #pm.download_mart()
-    #pm.run_check()
-    #pm.clean_utr("pymart/utr.fasta")
-
-
-
     is6mer = False
     is7merm8 = False
     is7mera1 = False
     is8mer = False
+
 
 '''
     if sixmer[0]:
@@ -151,6 +101,50 @@ def main():
     print("7mer-m8: " +str(is7merm8))
     print("8mer: " +str(is8mer))
 '''
+
+def init_argparse():
+    parser = argparse.ArgumentParser()
+    # PYMART ARGS
+    parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --file.", action="store_true")
+    parser.add_argument("-i", "--input", help="Specifies the location of gene list in csv format. NOTE the first column must contain ensembl gene IDs")
+    parser.add_argument("-o", "--output", help="Specifies the location of the FASTA output", default="pymart_out.fasta")
+    parser.add_argument("-c", "--check", help="Will run a comparison check between the output gene sequence and the input gene list. Used with --download", action="store_true")
+    parser.add_argument("-a", "--auto", help="Runs pymart in automode, performing the comparison check and file tidy (same as running -c -s) (recommended)", action="store_true")
+    parser.add_argument("-t", "--threads", help="Specifies the number of threads pymart will use when downloading. Default = 50", default=50)
+    parser.add_argument("-s", "--scrub", help="Will clean the specified FASTA file. Recomended to be run after downloading.", metavar="file")
+    parser.add_argument("--url", help="Specifies the url to append xml query to. Defaults to http://www.ensembl.org/biomart/martservice?query= (recomended not to change this", default="http://www.ensembl.org/biomart/martservice?query=")
+    args = parser.parse_args()
+    if args.download and (args.input is None):
+        parser.error("--download requires --file")
+    return args
+
+def arg_logic(args):
+    if args.download or args.scrub:
+        run_pymart(args)
+    else:
+        print("Please specify a task using --download or --search")
+
+def run_pymart(args):
+    pm = pymart.PYMart(args.url, args.input, args.output)
+    if args.scrub:
+        print(args.scrub)
+        pm.clean_utr(args.scrub)
+    else:
+        pm.download_mart(args.threads)
+        if args.check:
+            pm.run_check()
+        if args.auto:
+            pm.run_check()
+            pm.clean_utr(args.output)
+
+
+def main():
+    #print_menu()
+    #ans = input()
+    #check_menu_choice(ans)
+    arg_logic(init_argparse())
+
+
 
 
 if __name__ == "__main__":
