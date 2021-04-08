@@ -5,6 +5,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing as mp
 from Bio import SeqIO
 import os
+import re
 
 
 class PYMart:
@@ -69,12 +70,13 @@ class PYMart:
 
     def run_check(self):
         print("Running comparison check...")
-        self._create_check_file() # Extracts all fasta headers from the completed file including gene ID
-        self._check() # Compares them agaisnt the original list of gene IDs
-
-    def _create_check_file(self):
         if not os.path.exists('utr_check'):
             os.makedirs('utr_check')
+        self._create_check_file() # Extracts all fasta headers from the completed file including gene ID
+        self._check() # Compares them agaisnt the original list of gene IDs
+        self._check_completion_stamp()
+
+    def _create_check_file(self):
         print("Generating check file...")
         with open(self._completed_path, "a") as f:
             f.write("gene, \n")
@@ -99,3 +101,54 @@ class PYMart:
                 f.write(i + "\n")
             f.close()
         print("Failed gene IDs stored in utr_check/failed.csv")
+
+    def _check_completion_stamp(self):
+        for seq_record in SeqIO.parse("utr_test.fasta", "fasta"):
+            #print(seq_record.seq)
+            if "failed" in str(seq_record.seq):
+                print(seq_record.name, " may of failed")
+                with open('utr_check/failed_completion_stamp.csv', 'a') as f:
+                    f.write(seq_record.name + "\n")
+                f.close()
+
+    def clean_utr(self, file):
+        print("Cleaning UTR file...")
+        print("Removing failed records...")
+        for seq_record in SeqIO.parse(file, "fasta"):
+            #print(seq_record.seq)
+            if "failed" in str(seq_record.seq):
+                print(seq_record.name, " may of failed - removing")
+            else:
+                with open("temp.fasta", "a") as f:
+                    SeqIO.write(seq_record, f, "fasta")
+        print("Done!")
+        print("Removing records with no 3'UTR sequence...")
+        for seq_record in SeqIO.parse("temp.fasta", "fasta"):
+            if seq_record.seq == "Sequenceunavailable[success]" or seq_record.seq == "Sequenceunavailable":
+                print("No 3'UTR for", seq_record.name, " - removing")
+            else:
+                print("3'UTR sequence found for ", seq_record.name)
+                with open("temp_2.fasta", "a") as f:
+                    SeqIO.write(seq_record, f, "fasta")
+        print("Done!")
+        print("Removing all success markers...")
+        f = open("temp_2.fasta", "r")
+        file_string = str(f.read())
+        f.close()
+        #pat = "\[(?:[^\[\]]++|(?0))*+]"
+        temp_new_file_string = re.sub("\[(?:[^\[\]]+|)]", "", file_string) # regex to find any [success] markers and remove them
+        print("Done!")
+        print("Final clean...")
+        new_file_string = temp_new_file_string.replace(">killed", "")
+        print("Done!")
+        print("Writing cleaned fasta file as cleaned_utr.fasta")
+        with open("cleaned_utr.fasta", "a") as f:
+            f.write(new_file_string)
+        f.close()
+        print("Done!")
+        print("Removing temp files...")
+        os.remove("temp.fasta")
+        os.remove("temp_2.fasta")
+        print("FASTA file cleaned!")
+
+

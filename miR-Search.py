@@ -103,6 +103,7 @@ def main():
     pm = pymart.PYMart()
     pm.download_mart()
     pm.run_check()
+    pm.clean_utr("utr_test.fasta")
 
 
 
