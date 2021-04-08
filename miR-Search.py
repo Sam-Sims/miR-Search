@@ -1,11 +1,14 @@
 from Bio import SeqIO
 import sequence_handler
 import re
+from pymart import pymart
+
 
 def read_mir_testing(test):
     for fasta_sequence in SeqIO.parse(open('test-data/site-testing/' + test), 'fasta'):
         print("Reading", fasta_sequence.seq)
         return fasta_sequence.seq
+
 
 def read_3utr_testing(test):
     print("TEST")
@@ -13,7 +16,6 @@ def read_3utr_testing(test):
         print("Reading 3' UTR region... ")
         print(fasta_sequence.seq)
         return fasta_sequence.seq
-
 
 
 def search_6mer(mir, utr):
@@ -91,23 +93,24 @@ def main():
     fp = sequence_handler.FASTAParse()
     input_mir = fp.read_mir("test-data/hsa-miR-451a.fasta")
 
-    mir = sequence_handler.Microrna(input_mir)
+    mir = sequence_handler.MicroRNA(input_mir)
     mir.auto_process()
-    search_mir = str(mir.mir_seq)
 
     utr = fp.read_3utr("test-data/OSR1.fasta")
 
-    sixmer = search_6mer(str(search_mir), str(utr))
-    sevenmerm8 = search_7merm8(str(search_mir), str(utr))
-    sevenmera1 = search_7mera1(str(search_mir), str(utr))
-    eightmer = search_8mers(str(search_mir), str(utr))
+    so = sequence_handler.MicroRNASearch(utr)
+
+    pm = pymart.PYMart()
+    pm.download_mart()
+
+
 
     is6mer = False
     is7merm8 = False
     is7mera1 = False
     is8mer = False
 
-
+'''
     if sixmer[0]:
         print("6mers found at: ")
         print(sixmer[1])
@@ -145,6 +148,7 @@ def main():
     print("7mer-a1: " + str(is7mera1))
     print("7mer-m8: " +str(is7merm8))
     print("8mer: " +str(is8mer))
+'''
 
 
 if __name__ == "__main__":

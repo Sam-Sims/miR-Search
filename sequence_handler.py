@@ -1,7 +1,7 @@
 from Bio import SeqIO
 
 
-class Microrna:
+class MicroRNA:
     def __init__(self, seq):
         self.mir_seq = seq
         print("Creating miRNA object with sequence: " + self.mir_seq)
@@ -29,7 +29,25 @@ class Microrna:
         print("Processing complete!")
         print("Final sequence: ", self.mir_seq)
 
+    def return_seq(self):
+        return self.mir_seq
 
+    def find_6mer(self):
+        return self.mir_seq[1:7]
+
+    def find_7mera1(self):
+        return self.mir_seq[1:7] + "A"
+
+    def find_7merm8(self):
+        return self.mir_seq[:7]
+
+    def find_8mer(self):
+        return self.mir_seq[:7] + "A"
+
+
+class MicroRNASearch:
+    def __init__(self, utr):
+        self.utr = utr
 
 
 class FASTAParse:

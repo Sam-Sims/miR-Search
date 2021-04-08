@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Query>
+<Query  virtualSchemaName = "default" formatter = "FASTA" header = "0" uniqueRows = "0" count = "" datasetConfigVersion = "0.6" completionStamp = "1" >
+
+	<Dataset name = "hsapiens_gene_ensembl" interface = "default" >
+		<Filter name = "ensembl_gene_id" value = "REPLACE_ME"/>
+		<Attribute name = "ensembl_gene_id" />
+		<Attribute name = "3utr" />
+		<Attribute name = "external_gene_name" />
+	</Dataset>
+</Query>
