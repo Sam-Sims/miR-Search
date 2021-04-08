@@ -102,6 +102,7 @@ def main():
 
     pm = pymart.PYMart()
     pm.download_mart()
+    pm.run_check()
 
 
 
