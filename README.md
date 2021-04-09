@@ -10,7 +10,7 @@ pymart:
 - Cleans the 3'UTR data to remove unavailible sequence data and prepares it for direct use within miR-Search.
 
     
-    Usage python miR-Search -d -i "genelist" - o "output" -a
+Usage: `python miR-Search -d -i "genelist" - o "output" -a`
 
 Note: The genelist should be a csv file with the first column the ensembl gene IDs
 
