@@ -6,7 +6,7 @@ This project consists of two modules pymart and miR-Search:
 
 pymart:
 -
-- Allows you to download 3'UTR sequence data directly from biomart for a given subset of genes by manipulating and creating xml strings that are sent to the biomart servers.
+- Allows you to download 3'UTR sequence data directly from biomart for a given subset of genes by manipulating and creating xml strings that are sent to the biomart server.
 - Cleans the 3'UTR data to remove unavailible sequence data and prepares it for direct use within miR-Search.
 
     
@@ -24,7 +24,7 @@ template.xml contains the xml request string. This currently obtains 3'UTR seque
 - --auto, -a: Runs pymart in automode, performing the comparison check and file tidy (same as running -c -s)
 - --threads, -t: Specifies the number of threads pymart will use when downloading. Default = 50
 - --scrub, -s: Will clean the specified FASTA file. Recomended to be run after downloading.
-- --url: 
+- --url: Specifies the url to append xml query to. Defaults to http://www.ensembl.org/biomart/martservice?query= (dont really need to change this)
 
 miR-Search:
 -
