@@ -140,13 +140,45 @@ class PYMart:
         #pat = "\[(?:[^\[\]]++|(?0))*+]"
         temp_new_file_string = re.sub("\[(?:[^\[\]]+|)]", "", file_string) # regex to find any [success] markers and remove them
         print("Done!")
-        print("Final clean...")
+        print("Removing non sequence strings...")
         new_file_string = temp_new_file_string.replace("killed", "")
         print("Done!")
-        print("Writing cleaned fasta file as cleaned_utr.fasta")
-        with open("cleaned %s " % self.output_file, "a") as f:
+        print("Removing duplicate sequences...")
+
+        with open("temp3.fasta", "a") as f:
             f.write(new_file_string)
         f.close()
+
+        '''
+        sequences = {}
+        for seq_record in SeqIO.parse("pymart_out.fasta", "fasta"):
+            sequence = str(seq_record.seq).upper()
+            if sequence not in sequences:
+                sequences[sequence] = seq_record
+            else:
+                print("No dupe")
+        print(sequences)
+        with open("cleaned_utr_test.fasta", "w+") as output_file:
+            # Just read the hash table and write on the file as a fasta format
+            for sequence in sequences:
+                output_file.write(">" + str(sequences[sequence].seq))
+        '''
+        # REMOVES DUPLICATES
+        seen = []
+        records = []
+        for record in SeqIO.parse("temp3.fasta", "fasta"):
+            if str(record.seq) not in seen:
+                print(record.id, " not seen")
+                seen.append(str(record.seq))
+                records.append(record)
+            else:
+                print("Record seen")
+            print("done checking")
+        print("all done - writing")
+        SeqIO.write(records, "cleaned_utr_test.fasta", "fasta")
+        print("done write")
+
+        print("Writing cleaned fasta file as cleaned_utr_test.fasta")
         print("Done!")
         print("Removing temp files...")
         os.remove("temp.fasta")
