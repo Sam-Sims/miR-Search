@@ -110,7 +110,7 @@ class PYMart:
                     f.write(seq_record.name + "\n")
                 f.close()
 
-    def clean_utr(self, file):
+    def clean_utr(self, file): # This entire function is probably bad - look at the file writing
         rm_list = []
         print("Cleaning UTR file...")
         print("Removing failed records...")
@@ -183,6 +183,7 @@ class PYMart:
         print("Removing temp files...")
         os.remove("temp.fasta")
         os.remove("temp_2.fasta")
+        os.remove("temp3.fasta")
         print("FASTA file cleaned!")
         with open("removed_during_cleaning.txt", "a") as f:
             for i in rm_list:
