@@ -55,10 +55,11 @@ def run_search(input_mir, input_utr):
     utr_seq_ob_list = fp.read_multi_3utr(input_utr) # list of biopython seq objects for each record in master utr file
 
     ts = targetsearch.TargetSearch(utr_seq_ob_list)
-    ts.search_6mer(mir.find_6mer())
-    ts.search_7mera1(mir.find_7mera1())
-    ts.search_7merm8(mir.find_7merm8())
-    ts.search_8mer(mir.find_8mer())
+    sixmer_target_list = ts.search_6mer(mir.find_6mer())
+    sevenmera1_target_list = ts.search_7mera1(mir.find_7mera1())
+    sevenmerm8_target_list = ts.search_7merm8(mir.find_7merm8())
+    eightmer_target_list = ts.search_8mer(mir.find_8mer())
+    ts.generate_gene_value_dict(sixmer_target_list, sevenmera1_target_list, sevenmerm8_target_list, eightmer_target_list)
     print(mir.return_seq())
 
 
