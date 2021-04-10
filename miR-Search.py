@@ -1,5 +1,5 @@
 from Bio import SeqIO
-import sequence_handler
+import sequence_handler, targetsearch
 from pymart import pymart
 import argparse
 
@@ -45,18 +45,31 @@ def check_menu_choice(ans):
         print('An error occurred' + str(e))
 
 
-def run_search():
+def run_search(input_mir, input_utr):
     fp = sequence_handler.FASTAParse()
-    input_mir = fp.read_mir("test-data/hsa-miR-451a.fasta")
+    input_mir = fp.read_mir(input_mir)
 
     mir = sequence_handler.MicroRNA(input_mir)
     mir.auto_process()
 
-    utr = fp.read_3utr("test-data/OSR1.fasta")
+    utr_seq_ob_list = fp.read_multi_3utr(input_utr) # list of biopython seq objects for each record in master utr file
 
-    so = sequence_handler.MicroRNASearch(utr)
+    ts = targetsearch.TargetSearch(utr_seq_ob_list)
+    ts.search_6mer(mir.find_6mer())
+    ts.search_7mera1(mir.find_7mera1())
+    ts.search_7merm8(mir.find_7merm8())
+    ts.search_8mer(mir.find_8mer())
+    print(mir.return_seq())
 
-    is6mer = False
+
+
+    # SINGLE UTR SEARCH
+    #utr = fp.read_3utr(input_utr)
+    #so = sequence_handler.MicroRNASearch(utr)
+    #is6mer = so.search_6mer(mir.find_6mer())
+    #print(is6mer)
+
+    #is6mer = False
     is7merm8 = False
     is7mera1 = False
     is8mer = False
@@ -105,7 +118,7 @@ def run_search():
 def init_argparse():
     parser = argparse.ArgumentParser()
     # PYMART ARGS
-    parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --file.", action="store_true")
+    parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --input.", action="store_true")
     parser.add_argument("-i", "--input", help="Specifies the location of gene list in csv format. NOTE the first column must contain ensembl gene IDs")
     parser.add_argument("-o", "--output", help="Specifies the location of the FASTA output", default="pymart_out.fasta")
     parser.add_argument("-c", "--check", help="Will run a comparison check between the output gene sequence and the input gene list. Used with --download", action="store_true")
@@ -113,16 +126,14 @@ def init_argparse():
     parser.add_argument("-t", "--threads", help="Specifies the number of threads pymart will use when downloading. Default = 50", default=50)
     parser.add_argument("-s", "--scrub", help="Will clean the specified FASTA file. Recomended to be run after downloading.", metavar="file")
     parser.add_argument("--url", help="Specifies the url to append xml query to. Defaults to http://www.ensembl.org/biomart/martservice?query= (recomended not to change this", default="http://www.ensembl.org/biomart/martservice?query=")
+    #MIRSEARCH ARGS
+    parser.add_argument("-m", "--search", help="Runs the miR-Search programme", nargs=2)
+
     args = parser.parse_args()
     if args.download and (args.input is None):
         parser.error("--download requires --file")
     return args
 
-def arg_logic(args):
-    if args.download or args.scrub:
-        run_pymart(args)
-    else:
-        print("Please specify a task using --download or --search")
 
 def run_pymart(args):
     pm = pymart.PYMart(args.url, args.input, args.output)
@@ -142,8 +153,14 @@ def main():
     #print_menu()
     #ans = input()
     #check_menu_choice(ans)
-    arg_logic(init_argparse())
-
+    run_search("test-data/hsa-miR-451a.fasta", "cleaned_utr_test.fasta")
+    '''
+    args = init_argparse()
+    if args.download or args.scrub:
+        run_pymart(args)
+    else:
+        print("Please specify a task using --download or --search")
+    '''
 
 
 
