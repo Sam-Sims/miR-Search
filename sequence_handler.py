@@ -28,13 +28,14 @@ class MicroRNA:
         self.reverse_complement()
         self.back_transcribe()
         print("Processing complete!")
-        print("Final sequence: ", self.mir_seq)
+        print("Final search sequence: ", self.mir_seq)
 
     def return_seq(self):
         return self.mir_seq
 
     def find_6mer(self):
-        return self.mir_seq[1:7]
+        print(str(self.mir_seq[1:7]))
+        return str(self.mir_seq[1:7])
 
     def find_7mera1(self):
         return self.mir_seq[1:7] + "A"
@@ -47,14 +48,13 @@ class MicroRNA:
 
 
 class MicroRNASearch:
-    def __init__(self, utr):
-        self.utr = utr
+    def __init__(self, input_utr):
+        self.utr = input_utr
 
-    def search_6mer(mir, utr):
-        _mir = mir[1:7]
-        print("Searching for 6mer: ", _mir)
+    def search_6mer(self, mir):
+        print("Searching for 6mer: ", mir)
         seed_locations = []
-        for i in re.finditer(_mir, utr):
+        for i in re.finditer(mir, self.utr):
             _start = i.start()
             _end = i.end()
             _seed_locations = [_start, _end]
@@ -64,18 +64,17 @@ class MicroRNASearch:
         else:
             return True, seed_locations  # return tuple - first always bool indicating if seed site exsists, second a list of locations within the utr - if no locations list will be empty
 
-    def search_7merm8(mir, utr):  # 7mer-m8 = posistions 2-7 + match at posistion 8
-        _mir = mir[:7]  # remove pos 1
-        print("Searching for 7mer-m8: ", _mir)
+    def search_7merm8(self, mir):  # 7mer-m8 = posistions 2-7 + match at posistion 8
+        print("Searching for 7mer-m8: ", mir)
         seed_locations = []
         is_7mera1 = False
-        for i in re.finditer(_mir, utr):
+        for i in re.finditer(mir, self.utr):
             _start = i.start()
             _end = i.end()
             _seed_locations = [_start, _end]
             seed_locations.append(_seed_locations)
             _end_check_a = _end + 1
-            if utr[_start:_end_check_a].endswith('A'):
+            if self.utr[_start:_end_check_a].endswith('A'):
                 is_7mera1 = True
             else:
                 is_7mera1 = False
@@ -87,12 +86,11 @@ class MicroRNASearch:
             else:  # Else must be a 7mer-m8
                 return True, seed_locations
 
-    def search_7mera1(mir, utr):  # probably ineffecient searching again when already searched for 7mers - LOOK IN TO
-        _mir = mir[1:7] + "A"  # pos 1 always an A then look at sites 2-7
-        print("Searching for 7mer-a1: ", _mir)
+    def search_7mera1(self, mir):  # probably ineffecient searching again when already searched for 7mers - LOOK IN TO
+        print("Searching for 7mer-a1: ", mir)
         seed_locations = []
         is_7mera1 = False
-        for i in re.finditer(_mir, utr):
+        for i in re.finditer(mir, self.utr):
             _start = i.start()
             _end = i.end()
             _seed_locations = [_start, _end]
@@ -102,11 +100,10 @@ class MicroRNASearch:
         else:
             return True, seed_locations
 
-    def search_8mers(mir, utr):
-        _mir = mir[:7] + "A"  # look at sites 1-7
-        print("Searching for 8mer: ", _mir)
+    def search_8mers(self, mir):
+        print("Searching for 8mer: ", mir)
         seed_locations = []
-        for i in re.finditer(_mir, utr):
+        for i in re.finditer(mir, self.utr):
             _start = i.start()
             _end = i.end()
             _seed_locations = [_start, _end]
@@ -129,3 +126,13 @@ class FASTAParse:
             print("Reading 3' UTR region... ")
             print(fasta_sequence.seq)
             return fasta_sequence.seq
+
+    def read_multi_3utr(self, path):
+        utr_list = []
+        for fasta_sequence in SeqIO.parse(path, "fasta"):
+            print("Reading 3' UTR region... ")
+            print(fasta_sequence.seq)
+            utr_list.append(fasta_sequence)
+        return utr_list
+
+
