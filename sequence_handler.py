@@ -31,20 +31,20 @@ class MicroRNA:
         print("Final search sequence: ", self.mir_seq)
 
     def return_seq(self):
-        return self.mir_seq
+        return str(self.mir_seq)
 
     def find_6mer(self):
         print(str(self.mir_seq[1:7]))
         return str(self.mir_seq[1:7])
 
     def find_7mera1(self):
-        return self.mir_seq[1:7] + "A"
+        return str(self.mir_seq[1:7] + "A")
 
     def find_7merm8(self):
-        return self.mir_seq[:7]
+        return str(self.mir_seq[:7])
 
     def find_8mer(self):
-        return self.mir_seq[:7] + "A"
+        return str(self.mir_seq[:7] + "A")
 
 
 class MicroRNASearch:
