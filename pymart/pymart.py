@@ -7,13 +7,14 @@ from Bio import SeqIO
 
 
 class PYMart:
-    def __init__(self, server, genelist, output_file):
+    def __init__(self, server, genelist, output_file, split):
         manager = mp.Manager()
         self._q = manager.Queue()
         self._server = server
         self.gene_list = genelist # mart export needs to have ensembl IDs in first column.
         self._completed_path = "utr_check/completed.csv"
         self.output_file = output_file
+        self.split = split
 
     def download_mart(self, thread_num):
         df = pd.read_csv(self.gene_list)
@@ -64,8 +65,16 @@ class PYMart:
         os.remove(file_string)
 
         '''
-        self._q.put(r.text)
-        print("Added 3utr to queue \n")
+        if not self.split:
+            self._q.put(r.text)
+            print("Added 3utr to queue \n")
+        else:
+            _id = str(id) + ".fasta"
+            with open(_id, 'a') as f:
+                f.write(str(r.text) + '\n')
+            f.close()
+
+
 
     def run_check(self):
         print("Running comparison check...")
@@ -163,7 +172,8 @@ class PYMart:
             for sequence in sequences:
                 output_file.write(">" + str(sequences[sequence].seq))
         '''
-        # REMOVES DUPLICATES
+        # REMOVES DUPLICATES - takes long time
+        # Python sets might be better here - to look into
         seen = []
         records = []
         for record in SeqIO.parse("temp3.fasta", "fasta"):
