@@ -1,8 +1,12 @@
-import requests, sys, os, re
-from xml.dom import minidom
-import pandas as pd
-from multiprocessing.dummy import Pool as ThreadPool
 import multiprocessing as mp
+from multiprocessing.dummy import Pool as ThreadPool
+from xml.dom import minidom
+
+import os
+import pandas as pd
+import re
+import requests
+import sys
 from Bio import SeqIO
 
 
@@ -11,7 +15,7 @@ class PYMart:
         manager = mp.Manager()
         self._q = manager.Queue()
         self._server = server
-        self.gene_list = genelist # mart export needs to have ensembl IDs in first column.
+        self.gene_list = genelist  # mart export needs to have ensembl IDs in first column.
         self._completed_path = "utr_check/completed.csv"
         self.output_file = output_file
         self.split = split
@@ -21,9 +25,9 @@ class PYMart:
         ids = df[df.columns[0]]
         num_threads = thread_num
         pool = ThreadPool(num_threads)
-        pool.apply_async(self._listener) # spawn listener to watch for queue activity
+        pool.apply_async(self._listener)  # spawn listener to watch for queue activity
         pool.map(self._get_utr, ids)
-        self._q.put('kill') # listener watches for kill to exit
+        self._q.put('kill')  # listener watches for kill to exit
         pool.close()
         pool.join()
 
@@ -74,14 +78,12 @@ class PYMart:
                 f.write(str(r.text) + '\n')
             f.close()
 
-
-
     def run_check(self):
         print("Running comparison check...")
         if not os.path.exists('utr_check'):
             os.makedirs('utr_check')
-        self._create_check_file() # Extracts all fasta headers from the completed file including gene ID
-        self._check() # Compares them agaisnt the original list of gene IDs
+        self._create_check_file()  # Extracts all fasta headers from the completed file including gene ID
+        self._check()  # Compares them agaisnt the original list of gene IDs
         self._check_completion_stamp()
 
     def _create_check_file(self):
@@ -112,19 +114,19 @@ class PYMart:
 
     def _check_completion_stamp(self):
         for seq_record in SeqIO.parse(self.output_file, "fasta"):
-            #print(seq_record.seq)
+            # print(seq_record.seq)
             if "failed" in str(seq_record.seq):
                 print(seq_record.name, " may of failed")
                 with open('utr_check/failed_completion_stamp.csv', 'a') as f:
                     f.write(seq_record.name + "\n")
                 f.close()
 
-    def clean_utr(self, file): # This entire function is probably bad - look at the file writing
+    def clean_utr(self, file):  # This entire function is probably bad - look at the file writing
         rm_list = []
         print("Cleaning UTR file...")
         print("Removing failed records...")
         for seq_record in SeqIO.parse(file, "fasta"):
-            #print(seq_record.seq)
+            # print(seq_record.seq)
             if "failed" in str(seq_record.seq):
                 print(seq_record.name, " may of failed - removing")
                 rm_list.append(seq_record.name)
@@ -146,8 +148,9 @@ class PYMart:
         f = open("temp_2.fasta", "r")
         file_string = str(f.read())
         f.close()
-        #pat = "\[(?:[^\[\]]++|(?0))*+]"
-        temp_new_file_string = re.sub("\[(?:[^\[\]]+|)]", "", file_string) # regex to find any [success] markers and remove them
+        # pat = "\[(?:[^\[\]]++|(?0))*+]"
+        temp_new_file_string = re.sub("\[(?:[^\[\]]+|)]", "",
+                                      file_string)  # regex to find any [success] markers and remove them
         print("Done!")
         print("Removing non sequence strings...")
         new_file_string = temp_new_file_string.replace("killed", "")
@@ -199,5 +202,3 @@ class PYMart:
             for i in rm_list:
                 f.write("%s\n" % i)
         f.close()
-
-
