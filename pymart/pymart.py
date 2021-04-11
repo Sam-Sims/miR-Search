@@ -58,17 +58,6 @@ class PYMart:
 
         print("Request status code: ", r.status_code)
 
-        '''
-        file_string = "temp/temp" + id + ".fasta"
-        print(file_string)
-        f = open(file_string, "a")
-        f.write(r.text)
-        f.close()
-        for seq_record in SeqIO.parse("temp.fasta", "fasta"):
-            print(seq_record.seq)
-        os.remove(file_string)
-
-        '''
         if not self.split:
             self._q.put(r.text)
             print("Added 3utr to queue \n")
