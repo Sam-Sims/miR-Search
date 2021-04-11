@@ -47,7 +47,7 @@ class MicroRNA:
         return str(self.mir_seq[:7] + "A")
 
 
-class MicroRNASearch:
+class MicroRNASearch: # redundant
     def __init__(self, input_utr):
         self.utr = input_utr
 
