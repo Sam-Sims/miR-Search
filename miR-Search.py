@@ -36,8 +36,10 @@ def check_menu_choice(ans):
         print('An error occurred' + str(e))
 
 
-def run_search(input_mir, input_utr):
+def run_search(args):
     fp = sequence_handler.FASTAParse()
+    input_mir = args.input[0]
+    input_utr = args.input[1]
     mir_name = input_mir
     input_mir = fp.read_mir(input_mir)
 
@@ -47,10 +49,7 @@ def run_search(input_mir, input_utr):
     utr_seq_ob_list = fp.read_multi_3utr(input_utr)  # list of biopython seq objects for each record in master utr file
 
     ts = targetsearch.TargetSearch(utr_seq_ob_list, mir_name)
-    print(mir.find_6mer())
-    print(mir.find_7mera1())
-    print(mir.find_7merm8())
-    print(mir.find_8mer())
+
     sixmer_target_list = ts.search_6mer(mir.find_6mer())
     sevenmera1_target_list = ts.search_7mera1(mir.find_7mera1())
     sevenmerm8_target_list = ts.search_7merm8(mir.find_7merm8())
@@ -60,8 +59,13 @@ def run_search(input_mir, input_utr):
     else:
         with open('gene_id_dict.pickle', 'rb') as handle:
             gene_dict = pickle.load(handle)
+        handle.close()
     targets = ts.calc_gene_targets(gene_dict)
     ts.print_targets(targets)
+    print(mir.find_6mer())
+    print(mir.find_7mera1())
+    print(mir.find_7merm8())
+    print(mir.find_8mer())
 
     # SINGLE UTR SEARCH
     # utr = fp.read_3utr(input_utr)
@@ -102,6 +106,9 @@ def init_argparse():
                                default=False, required=False, action="store_true")
 
     # MIRSEARCH ARGS
+    search_parser.add_argument("-i", "--input",
+                               help="Specifies the input for miR-Search. First: miRNA file; Second: UTR file. Files in FASTA format.",
+                               required=True, nargs=2, metavar=("miRNA", "UTR"))
 
     args = parser.parse_args()
     return args
@@ -134,6 +141,7 @@ def main():
         run_pymart(args)
     elif args.command == "search":
         print("Run search")
+        run_search(args)
     else:
         print("Please specify a task using pymart or search. Usage miR-Search pymart; miR-Search search")
 
