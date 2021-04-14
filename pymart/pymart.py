@@ -1,6 +1,8 @@
 import multiprocessing as mp
 from multiprocessing.dummy import Pool as ThreadPool
 from xml.dom import minidom
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
 
 import os
 import pandas as pd
@@ -47,25 +49,30 @@ class PYMart:
         filter = mydoc.getElementsByTagName('Filter')
         for elem in filter:
             elem.attributes['value'].value = id
+            break
         string = mydoc.toxml()
         r = requests.get(self._server + string)
         print("Processing: ", id)
         print("Sending request...")
 
         if not r.ok:
-            r.raise_for_status()
-            sys.exit()
-
-        print("Request status code: ", r.status_code)
-
-        if not self.split:
-            self._q.put(r.text)
-            print("Added 3utr to queue \n")
-        else:
-            _id = str(id) + ".fasta"
-            with open(_id, 'a') as f:
-                f.write(str(r.text) + '\n')
+            with open("error.txt", "a") as f:
+                f.write(id + "\n")
             f.close()
+        else:
+            print("Request status code: ", r.status_code)
+
+            if not self.split:  # if not spliting output add the utr to a queue so listener can write to file
+                self._q.put(r.text)
+                print("Added 3utr to queue \n")
+            else:  # split the output and have each thread write to a seperate file
+                _id = str(id) + ".fasta"
+                with open(_id, 'a') as f:
+                    f.write(str(r.text) + '\n')
+                f.close()
+
+
+
 
     def run_check(self):
         print("Running comparison check...")
@@ -73,7 +80,7 @@ class PYMart:
             os.makedirs('utr_check')
         self._create_check_file()  # Extracts all fasta headers from the completed file including gene ID
         self._check()  # Compares them agaisnt the original list of gene IDs
-        self._check_completion_stamp()
+        self._check_completion_stamp() # biomart returns own completion stamp with the response - check for any failures
 
     def _create_check_file(self):
         print("Generating check file...")
@@ -111,7 +118,10 @@ class PYMart:
                 f.close()
 
     def clean_utr(self, file):  # This entire function is probably bad - look at the file writing
+        unique = True
+        remove_dup = False
         rm_list = []
+
         print("Cleaning UTR file...")
         print("Removing failed records...")
         for seq_record in SeqIO.parse(file, "fasta"):
@@ -150,6 +160,7 @@ class PYMart:
             f.write(new_file_string)
         f.close()
 
+
         '''
         sequences = {}
         for seq_record in SeqIO.parse("pymart_out.fasta", "fasta"):
@@ -164,24 +175,62 @@ class PYMart:
             for sequence in sequences:
                 output_file.write(">" + str(sequences[sequence].seq))
         '''
-        # REMOVES DUPLICATES - takes long time
-        # Python sets might be better here - to look into
-        seen = []
-        records = []
-        for record in SeqIO.parse("temp3.fasta", "fasta"):
-            if str(record.seq) not in seen:
-                print(record.id, " not seen")
-                seen.append(str(record.seq))
-                records.append(record)
-            else:
-                print("Record seen")
-            print("done checking")
-        print("all done - writing")
-        SeqIO.write(records, "cleaned_utr_test.fasta", "fasta")
-        print("done write")
+        if remove_dup:
+            # REMOVES DUPLICATES - takes long time
+            # Python sets might be better here - to look into
+            seen = []
+            records = []
+            for record in SeqIO.parse("temp3.fasta", "fasta"):
+                if str(record.seq) not in seen:
+                    print(record.id, " not seen")
+                    seen.append(str(record.seq))
+                    records.append(record)
+                else:
+                    print("Record seen")
+                print("done checking")
+            print("all done - writing")
+            SeqIO.write(records, "cleaned_utr_test.fasta", "fasta")
+            print("done write")
 
-        print("Writing cleaned fasta file as cleaned_utr_test.fasta")
-        print("Done!")
+            print("Writing cleaned fasta file as cleaned_utr_test.fasta")
+            print("Done!")
+
+        if unique:
+            '''
+            id_seen = []
+            id_records = []
+            dup = []
+            for record in SeqIO.parse("cleaned_utr_test.fasta", "fasta"):
+                if str(record.id) not in id_seen:
+                    print(record.id, " not seen")
+                    id_seen.append(str(record.id))
+                else:
+                    print(record.id, "Duplicate")
+                    if record.id not in dup:
+                        dup.append(record.id)
+                    else:
+                        print("Already in dup list")
+            print(dup)
+            for record in SeqIO.parse("cleaned_utr_test.fasta", "fasta"):
+                if str(record.id) in dup:
+                    print("Dup found")
+            '''
+            seqs = {}
+            recs = []
+            for seq_record in SeqIO.parse("cleaned_utr_test.fasta", "fasta"):
+                if seq_record.name not in seqs:
+                    seqs[seq_record.name] = seq_record.seq
+                else:
+                    if len(seqs[seq_record.name]) <= len(seq_record.seq):
+                        seqs[seq_record.name] = seq_record.seq
+                    print("Duplicate found, ", seq_record.name)
+            for name, seq in seqs.items():
+                print(name)
+                rec = SeqRecord(Seq(str(seq)), id=name, description="")
+                recs.append(rec)
+
+            SeqIO.write(recs, "final.fasta", "fasta")
+
         print("Removing temp files...")
         os.remove("temp.fasta")
         os.remove("temp_2.fasta")
