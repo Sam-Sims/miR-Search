@@ -1,11 +1,12 @@
 import argparse
-
-from Bio import SeqIO
+import os
+import pickle
 
 import sequence_handler
 import targetsearch
-import os, pickle
 from pymart import pymart
+
+v_print = None
 
 
 def print_menu():
@@ -24,17 +25,6 @@ def print_menu():
     print("2. Run Search")
 
 
-def check_menu_choice(ans):
-    try:
-        if ans == '1':
-            run_pymart()
-        elif ans == '2':
-            run_search()
-        else:
-            print('Error, a valid answer was not supplied!')
-    except Exception as e:
-        print('An error occurred' + str(e))
-
 
 def run_search(args):
     fp = sequence_handler.FASTAParse()
@@ -46,32 +36,32 @@ def run_search(args):
     mir = sequence_handler.MicroRNA(input_mir)
     mir.auto_process()
 
-    utr_seq_ob_list = fp.read_multi_3utr(input_utr)  # list of biopython seq objects for each record in master utr file
+    utr_seq_ob_list = fp.read_multi_3utr(input_utr, v_print)  # list of biopython seq objects for each record in master utr file
 
-    ts = targetsearch.TargetSearch(utr_seq_ob_list, mir_name)
+    ts = targetsearch.TargetSearch(utr_seq_ob_list, mir_name, v_print)
 
     sixmer_target_list = ts.search_6mer(mir.find_6mer())
     sevenmera1_target_list = ts.search_7mera1(mir.find_7mera1())
     sevenmerm8_target_list = ts.search_7merm8(mir.find_7merm8())
     eightmer_target_list = ts.search_8mer(mir.find_8mer())
-    if not os.path.isfile("gene_id_dict.pickle"):
-        gene_dict = ts.generate_gene_value_dict(sixmer_target_list, sevenmera1_target_list, sevenmerm8_target_list, eightmer_target_list)
+    if args.cache:
+        if not os.path.isfile("gene_id_dict.pickle"):
+            v_print(2, "No cache found despite using --cache") # ignore pycharm error here
+            gene_dict = ts.generate_gene_value_dict(sixmer_target_list, sevenmera1_target_list, sevenmerm8_target_list,
+                                                    eightmer_target_list)
+        else:
+            print("Cache found!")
+            print("Reading from cache...")
+            with open('gene_id_dict.pickle', 'rb') as handle:
+                gene_dict = pickle.load(handle)
+
+            handle.close()
     else:
-        with open('gene_id_dict.pickle', 'rb') as handle:
-            gene_dict = pickle.load(handle)
-        handle.close()
+        gene_dict = ts.generate_gene_value_dict(sixmer_target_list, sevenmera1_target_list, sevenmerm8_target_list,
+                                                eightmer_target_list)
+
     targets = ts.calc_gene_targets(gene_dict)
     ts.print_targets(targets)
-    print(mir.find_6mer())
-    print(mir.find_7mera1())
-    print(mir.find_7merm8())
-    print(mir.find_8mer())
-
-    # SINGLE UTR SEARCH
-    # utr = fp.read_3utr(input_utr)
-    # so = sequence_handler.MicroRNASearch(utr)
-    # is6mer = so.search_6mer(mir.find_6mer())
-    # print(is6mer)
 
 
 def init_argparse():
@@ -104,11 +94,16 @@ def init_argparse():
                                default="http://www.ensembl.org/biomart/martservice?query=", required=False)
     pymart_parser.add_argument("--split", help="Splits the output into seperate files. Default FALSE. Ignores --output",
                                default=False, required=False, action="store_true")
+    pymart_parser.add_argument('-v', '--verbosity', action="count",
+                               help="increase output verbosity (e.g., -vv is more than -v)")
 
     # MIRSEARCH ARGS
     search_parser.add_argument("-i", "--input",
                                help="Specifies the input for miR-Search. First: miRNA file; Second: UTR file. Files in FASTA format.",
                                required=True, nargs=2, metavar=("miRNA", "UTR"))
+    search_parser.add_argument('-v', '--verbosity', action="count", help="increase output verbosity (e.g., -vv is more than -v)")
+    search_parser.add_argument('--cache', action="store_true",
+                               help="Will use the gene_dict cache if there is one")
 
     args = parser.parse_args()
     return args
@@ -127,17 +122,21 @@ def run_pymart(args):
             pm.run_check()
 
 
-
-global v_print
-
-
 def main():
-    # print_menu()
-    # ans = input()
-    # check_menu_choice(ans)
-    #run_search("test-data/hsa-miR-451a.fasta", "final.fasta")
     args = init_argparse()
+
+    if args.verbosity: # if verbose the define print function use v_print(level, string) level =1 info, 2=warn, 3=error
+        def _v_print(*verb_args):
+            if verb_args[0] > (3 - args.verbosity):
+                print(verb_args[1])
+    else:
+        _v_print = lambda *a: None  # do nothinh
+
+    global v_print
+    v_print = _v_print
+
     if args.command == "pymart":
+        v_print(1, "egg")
         run_pymart(args)
     elif args.command == "search":
         print("Run search")
