@@ -4,6 +4,7 @@ from Bio import SeqIO
 
 import sequence_handler
 import targetsearch
+import os, pickle
 from pymart import pymart
 
 
@@ -37,6 +38,7 @@ def check_menu_choice(ans):
 
 def run_search(input_mir, input_utr):
     fp = sequence_handler.FASTAParse()
+    mir_name = input_mir
     input_mir = fp.read_mir(input_mir)
 
     mir = sequence_handler.MicroRNA(input_mir)
@@ -44,17 +46,22 @@ def run_search(input_mir, input_utr):
 
     utr_seq_ob_list = fp.read_multi_3utr(input_utr)  # list of biopython seq objects for each record in master utr file
 
-    ts = targetsearch.TargetSearch(utr_seq_ob_list)
+    ts = targetsearch.TargetSearch(utr_seq_ob_list, mir_name)
     print(mir.find_6mer())
     print(mir.find_7mera1())
     print(mir.find_7merm8())
     print(mir.find_8mer())
-    # sixmer_target_list = ts.search_6mer(mir.find_6mer())
-    # sevenmera1_target_list = ts.search_7mera1(mir.find_7mera1())
-    # sevenmerm8_target_list = ts.search_7merm8(mir.find_7merm8())
-    # eightmer_target_list = ts.search_8mer(mir.find_8mer())
-    # gene_dict = ts.generate_gene_value_dict(sixmer_target_list, sevenmera1_target_list, sevenmerm8_target_list, eightmer_target_list)
-    ts.calc_gene_targets()
+    sixmer_target_list = ts.search_6mer(mir.find_6mer())
+    sevenmera1_target_list = ts.search_7mera1(mir.find_7mera1())
+    sevenmerm8_target_list = ts.search_7merm8(mir.find_7merm8())
+    eightmer_target_list = ts.search_8mer(mir.find_8mer())
+    if not os.path.isfile("gene_id_dict.pickle"):
+        gene_dict = ts.generate_gene_value_dict(sixmer_target_list, sevenmera1_target_list, sevenmerm8_target_list, eightmer_target_list)
+    else:
+        with open('gene_id_dict.pickle', 'rb') as handle:
+            gene_dict = pickle.load(handle)
+    targets = ts.calc_gene_targets(gene_dict)
+    ts.print_targets(targets)
 
     # SINGLE UTR SEARCH
     # utr = fp.read_3utr(input_utr)
@@ -89,7 +96,7 @@ def init_argparse():
                                help="Will clean the specified FASTA file. Recomended to be run after downloading.",
                                metavar="file", required=False)
     pymart_parser.add_argument("--url",
-                               help="Specifies the url to append xml query to. Defaults to http://www.ensembl.org/biomart/martservice?query= (recomended not to change this",
+                               help="Specifies the url to append xml query to. Defaults to -t 10 (recomended not to change this",
                                default="http://www.ensembl.org/biomart/martservice?query=", required=False)
     pymart_parser.add_argument("--split", help="Splits the output into seperate files. Default FALSE. Ignores --output",
                                default=False, required=False, action="store_true")
@@ -106,12 +113,12 @@ def run_pymart(args):
         print(args.scrub)
         pm.clean_utr(args.scrub)
     else:
-        pm.download_mart(args.threads)
+        pm.download_mart(int(args.threads))
         if args.check:
             pm.run_check()
         if args.auto:
             pm.run_check()
-            pm.clean_utr(args.output)
+
 
 
 global v_print
@@ -121,7 +128,7 @@ def main():
     # print_menu()
     # ans = input()
     # check_menu_choice(ans)
-    # run_search("test-data/hsa-miR-451a.fasta", "cleaned_utr_test.fasta")
+    #run_search("test-data/hsa-miR-451a.fasta", "final.fasta")
     args = init_argparse()
     if args.command == "pymart":
         run_pymart(args)
