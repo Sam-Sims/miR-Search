@@ -35,7 +35,6 @@ class MicroRNA:
         return str(self.mir_seq)
 
     def find_6mer(self):
-        print(str(self.mir_seq[1:7]))
         return str(self.mir_seq[1:7])
 
     def find_7mera1(self):
@@ -61,10 +60,10 @@ class FASTAParse:
             print(fasta_sequence.seq)
             return fasta_sequence.seq
 
-    def read_multi_3utr(self, path):
+    def read_multi_3utr(self, path, v_print):
         utr_list = []
         for fasta_sequence in SeqIO.parse(path, "fasta"):
-            print("Reading 3' UTR region... ")
-            print(fasta_sequence.seq)
+            v_print(1, "Reading 3' UTR region... ")
+            v_print(1, fasta_sequence.seq)
             utr_list.append(fasta_sequence)
         return utr_list
