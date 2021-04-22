@@ -1,5 +1,3 @@
-import re
-
 from Bio import SeqIO
 
 
@@ -48,22 +46,19 @@ class MicroRNA:
 
 
 class FASTAParse:
+    def __init__(self, v_print):
+        self.v_print = v_print
+
     def read_mir(self, path):
         for fasta_sequence in SeqIO.parse(open(path), 'fasta'):
             print("Reading miRNA at " + path + "...")
             print("miRNA: ", fasta_sequence.seq)
             return fasta_sequence.seq
 
-    def read_3utr(self, path):
-        for fasta_sequence in SeqIO.parse(path, "fasta"):
-            print("Reading 3' UTR region... ")
-            print(fasta_sequence.seq)
-            return fasta_sequence.seq
-
-    def read_multi_3utr(self, path, v_print):
+    def read_multi_3utr(self, path):
         utr_list = []
         for fasta_sequence in SeqIO.parse(path, "fasta"):
-            v_print(1, "Reading 3' UTR region... ")
-            v_print(1, fasta_sequence.seq)
+            self.v_print(1, "Reading 3' UTR region... ")
+            self.v_print(1, fasta_sequence.seq)
             utr_list.append(fasta_sequence)
         return utr_list

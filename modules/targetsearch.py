@@ -36,10 +36,10 @@ class TargetSearch:
         print("Found ", len(result), " targets")
         return result
 
+    # Returns dict of gene id and location
     def _search(self, mir):
         master_list = {}
         for seq in self.utr:
-            # print("Searching ", seq.id, "...")
             seed_locations = []
             seq_string = str(seq.seq)  # convert to string for regex
             for i in re.finditer(mir, seq_string):
@@ -48,13 +48,14 @@ class TargetSearch:
                 _seed_locations = [_start, _end]
                 seed_locations.append(seq.id)
                 seed_locations.append(_seed_locations)
-            if not seed_locations:
-                ans = 1 + 1  # just to get if for now so console doesnt fill up with print
-            else:
+            if seed_locations:
                 master_list[seq.id] = _seed_locations
+            else:
+                self.v_print(1, "No targets found")
         return master_list
 
-    def generate_gene_value_dict(self, six, sevena1, sevenm8, eight):  # produces dict of genes as keys and list of t/f if they are 6,7,8mer as values
+    # produces dict of genes as keys and list of t/f if they are 6,7,8mer as values
+    def generate_gene_value_dict(self, six, sevena1, sevenm8, eight):
         print("Generating dictionary of gene IDs and targets...")
         gene_id_dict = {}
         i = 0
@@ -100,7 +101,6 @@ class TargetSearch:
             self.v_print(1, targets)
             gene_id_dict[str(seq.id)] = targets
             i =+ 1
-        #print(gene_id_dict)  # dict containg gene id then boolean value for 6mer 7mera1, 7merm8 8mer in that order
         print("Done!")
         print("Caching gene dict...")
         with open('gene_id_dict.pickle', 'wb') as handle:
@@ -110,6 +110,7 @@ class TargetSearch:
         print("Cache saved to gene_id_dict.pickle")
         return gene_id_dict
 
+    # Takes dict of genes and runs logic to categorise site
     def calc_gene_targets(self, gene_dict):
         '''
         sys.stdout = open("gene_dict.txt", "a")
@@ -124,33 +125,23 @@ class TargetSearch:
         dup = {}
         for key, value in gene_dict.items():
             if value[3]: # if 8mer true (everything else will true since subsets)
-                #print("8mer: ", key, value)
-                temp_list = [key, value[3][1]]
                 e[key] = value[3][1]
             elif value[0] and not value[1] and not value[2] and not value[3]:  # if 6mer and nothing else
-                #print("6mer: ", key, value)
-                temp_list = [key, value[0][1]]
                 s[key] = value[0][1]
-            elif value[1]:
-                if value[1] and value[2]:
+            elif value[1]: # if 7mera1
+                if value[1] and value[2]: # if both 7mer sub types
                     dup_string = "Duplicates found: " + str(key) + " contains two 7mer sites at " + str(value[1][1][0]) + " and " + str(value[2][1][0])
                     self.v_print(2, dup_string)
                     t_list = [value[1][1], value[2][1]]
                     dup[key] = t_list
                 else:
-                    temp_list = [key, value[1][1]]
                     se1[key] = value[1][1]
-            elif value[2]:
-                temp_list = [key, value[2][1]]
+            elif value[2]: # if 7merm8
                 se8[key] = value[2][1]
-        dict = {}
-        dict["6mer"] = s
-        dict["7mera1"] = se1
-        dict["7merm8"] = se8
-        dict["8mer"] = e
-        dict["duplicates"] = dup
+
+        return_dict = {"6mer": s, "7mera1": se1, "7merm8": se8, "8mer": e, "duplicates": dup}
         print("Done!")
-        return dict
+        return return_dict
 
     def print_targets(self, gene_targets): # this is quite geniuenly the worst code ive ever written but it works for now
         print("Outputing gene target file...")
