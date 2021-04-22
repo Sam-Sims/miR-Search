@@ -20,7 +20,6 @@ def prepare_targets(target_file):
 def merge(sleuth, targets):
     df_temp = targets.drop(targets.columns[[1,2,3]] , axis=1)
     targets_6mer= pd.merge(sleuth, df_temp, left_on = 'target_id', right_on = '6mer', how = 'inner')
-
     df_temp = targets.drop(targets.columns[[0, 2, 3]], axis=1)
     targets_7mera1= pd.merge(sleuth, df_temp, left_on='target_id', right_on='7mera1', how='inner')
 
@@ -30,13 +29,13 @@ def merge(sleuth, targets):
     df_temp = targets.drop(targets.columns[[0, 1, 2]], axis=1)
     targets_8mer = pd.merge(sleuth, df_temp, left_on='target_id', right_on='8mer', how='inner')
 
-    targets_6mer['6mer'] = '6mer'
+    targets_6mer['6mer'] = '6mer (N= ' + str(len(targets_6mer)) +")"
     targets_6mer.rename(columns={"6mer": "type"}, inplace=True)
-    targets_7mera1['7mera1'] = '7mera1'
+    targets_7mera1['7mera1'] = '7mera1 (N= ' + str(len(targets_7mera1)) +")"
     targets_7mera1.rename(columns={"7mera1": "type"}, inplace=True)
-    targets_7merm8['7merm8'] = '7merm8'
+    targets_7merm8['7merm8'] = '7merm8 (N= ' + str(len(targets_7merm8)) +")"
     targets_7merm8.rename(columns={"7merm8": "type"}, inplace=True)
-    targets_8mer['8mer'] = '8mer'
+    targets_8mer['8mer'] = '8mer (N= ' + str(len(targets_8mer)) +")"
     targets_8mer.rename(columns={"8mer": "type"}, inplace=True)
 
     targets_6mer = targets_6mer[targets_6mer['b'].notna()]
@@ -44,16 +43,23 @@ def merge(sleuth, targets):
     targets_7merm8 = targets_7merm8[targets_7merm8['b'].notna()]
     targets_8mer = targets_8mer[targets_8mer['b'].notna()]
 
-    sleuth['se_b'] = 'control'
-    sleuth.rename(columns={"se_b": "type"}, inplace=True)
+    targets_6mer = targets_6mer.drop(targets_6mer.columns[[2]], axis=1)
+
     sleuth= sleuth[sleuth['b'].notna()]
-    sleuth = sleuth.drop(sleuth.columns[[0]], axis=1)
+    #sleuth = sleuth.drop(sleuth.columns[[0]], axis=1)
+    print(sleuth)
+    sleuth = sleuth[~sleuth.target_id.isin(targets_6mer.target_id)]
+    sleuth = sleuth[~sleuth.target_id.isin(targets_7mera1.target_id)]
+    sleuth = sleuth[~sleuth.target_id.isin(targets_7merm8.target_id)]
+    sleuth = sleuth[~sleuth.target_id.isin(targets_8mer.target_id)]
     print(sleuth)
 
+    sleuth['se_b'] = 'non-targets (N= ' + str(len(sleuth)) +")"
+    sleuth.rename(columns={"se_b": "type"}, inplace=True)
+
     final_df = pd.concat([targets_6mer, targets_7mera1, targets_7merm8, targets_8mer, sleuth])
-
-    final_df = final_df.drop(final_df.columns[[0,2]], axis=1)
-
-
+    final_df = final_df.drop(final_df.columns[[0,3]], axis=1)
     print(final_df)
-    final_df.to_csv("out.csv", index=False)
+
+
+    final_df.to_csv("out3.csv", index=False)
