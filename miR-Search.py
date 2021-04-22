@@ -2,9 +2,7 @@ import argparse
 import os
 import pickle
 
-import sequence_handler
-import targetsearch
-from pymart import pymart
+from modules import pymart, ggplot_builder as pb, sequence_handler, targetsearch
 
 v_print = None
 
@@ -27,23 +25,29 @@ def print_menu():
 
 
 def run_search(args):
-    fp = sequence_handler.FASTAParse()
     input_mir = args.input[0]
     input_utr = args.input[1]
+
+    # Load FASTA files
+    fp = sequence_handler.FASTAParse(v_print)
+    utr_seq_ob_list = fp.read_multi_3utr(input_utr)  # returns list of biopython seq objects for each record in utr file
     mir_name = input_mir
     input_mir = fp.read_mir(input_mir)
 
-    mir = sequence_handler.MicroRNA(input_mir)
-    mir.auto_process()
+    # process mir
+    mir = sequence_handler.MicroRNA(input_mir) # create a sequence handler object of input mir
+    mir.auto_process() # trims, finds reverse complement and back transcribes mir object
 
-    utr_seq_ob_list = fp.read_multi_3utr(input_utr, v_print)  # list of biopython seq objects for each record in master utr file
-
+    # create target search object - might want to rework this feels weird
     ts = targetsearch.TargetSearch(utr_seq_ob_list, mir_name, v_print)
 
+    # returns dict where key = gene id/name, value = location for all targets
     sixmer_target_list = ts.search_6mer(mir.find_6mer())
     sevenmera1_target_list = ts.search_7mera1(mir.find_7mera1())
     sevenmerm8_target_list = ts.search_7merm8(mir.find_7merm8())
     eightmer_target_list = ts.search_8mer(mir.find_8mer())
+
+    # returns a dict containg each gene as key and a list of 4 bools as the value - bools indicate if gene has 6,7a1,7m8 or 8mer target site (in that order) for the input mir
     if args.cache:
         if not os.path.isfile("gene_id_dict.pickle"):
             v_print(2, "No cache found despite using --cache") # ignore pycharm error here
@@ -54,12 +58,12 @@ def run_search(args):
             print("Reading from cache...")
             with open('gene_id_dict.pickle', 'rb') as handle:
                 gene_dict = pickle.load(handle)
-
             handle.close()
     else:
         gene_dict = ts.generate_gene_value_dict(sixmer_target_list, sevenmera1_target_list, sevenmerm8_target_list,
                                                 eightmer_target_list)
 
+    # logic to determine single target site based on gene dict - this is because sites can be subsets of eachother. i.e 6mer subset of 7mer and 8mer
     targets = ts.calc_gene_targets(gene_dict)
     ts.print_targets(targets)
 
@@ -69,6 +73,7 @@ def init_argparse():
     subparsers = parser.add_subparsers(dest="command")
     pymart_parser = subparsers.add_parser('pymart')
     search_parser = subparsers.add_parser('search')
+    format_parser = subparsers.add_parser('format')
 
     # PYMART ARGS
     # parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --input.", action="store_true")
@@ -95,7 +100,7 @@ def init_argparse():
     pymart_parser.add_argument("--split", help="Splits the output into seperate files. Default FALSE. Ignores --output",
                                default=False, required=False, action="store_true")
     pymart_parser.add_argument('-v', '--verbosity', action="count",
-                               help="increase output verbosity (e.g., -vv is more than -v)")
+                               help="Increase output verbosity (e.g., -vv is more than -v)")
 
     # MIRSEARCH ARGS
     search_parser.add_argument("-i", "--input",
@@ -105,8 +110,21 @@ def init_argparse():
     search_parser.add_argument('--cache', action="store_true",
                                help="Will use the gene_dict cache if there is one")
 
+    # FORMAT ARGS
+    format_parser.add_argument("-i", "--input",
+                               help="Specifies the input for the format. First: sleuth results; Second: mirR-Search output. Files in CSV format.",
+                               required=True, nargs=2, metavar=("sleuth", "miR-Search"))
+    format_parser.add_argument('-v', '--verbosity', action="count",
+                               help="increase output verbosity (e.g., -vv is more than -v)")
+
     args = parser.parse_args()
     return args
+
+
+def run_format(args):
+    sleuth = pb.prepare_sleuth_results(args.input[0])
+    targets = pb.prepare_targets(args.input[1])
+    pb.merge(sleuth, targets)
 
 
 def run_pymart(args):
@@ -120,6 +138,7 @@ def run_pymart(args):
             pm.run_check()
         if args.auto:
             pm.run_check()
+            pm.clean_utr(args.output)
 
 
 def main():
@@ -136,11 +155,11 @@ def main():
     v_print = _v_print
 
     if args.command == "pymart":
-        v_print(1, "egg")
         run_pymart(args)
     elif args.command == "search":
-        print("Run search")
         run_search(args)
+    elif args.command == "format":
+        run_format(args)
     else:
         print("Please specify a task using pymart or search. Usage miR-Search pymart; miR-Search search")
 
