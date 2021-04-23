@@ -62,3 +62,11 @@ class FASTAParse:
             self.v_print(1, fasta_sequence.seq)
             utr_list.append(fasta_sequence)
         return utr_list
+
+    def read_mirbase(self, input_mir):
+        print("Reading database...")
+        for fasta_sequence in SeqIO.parse(open("database/mirs.fasta"), 'fasta'):
+            if input_mir in fasta_sequence.id:
+                print(fasta_sequence.id)
+                return fasta_sequence.seq
+        return "Error"
