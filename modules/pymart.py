@@ -13,7 +13,7 @@ from Bio import SeqIO
 
 
 class PYMart:
-    def __init__(self, server, genelist, output_file, split):
+    def __init__(self, server, genelist, output_file, split, mir):
         manager = mp.Manager()
         self._q = manager.Queue()
         self._server = server
@@ -21,6 +21,10 @@ class PYMart:
         self._completed_path = "utr_check/completed.csv"
         self.output_file = output_file
         self.split = split
+        self.mir = mir
+
+    def set_split(self):
+        self.split = True
 
     def download_mart(self, thread_num):
         df = pd.read_csv(self.gene_list)
@@ -28,7 +32,7 @@ class PYMart:
         num_threads = thread_num
         pool = ThreadPool(num_threads)
         pool.apply_async(self._listener)  # spawn listener to watch for queue activity
-        pool.map(self._get_utr, ids)
+        pool.map(self._worker, ids)
         self._q.put('kill')  # listener watches for kill to exit
         pool.close()
         pool.join()
@@ -44,8 +48,11 @@ class PYMart:
                 f.write(str(m) + '\n')
                 f.flush()
 
-    def _get_utr(self, id):
-        mydoc = minidom.parse('template.xml')
+    def _worker(self, id):
+        if self.mir:
+            mydoc = minidom.parse('templates/template_mir.xml')
+        else:
+            mydoc = minidom.parse('templates/template_utr.xml')
         filter = mydoc.getElementsByTagName('Filter')
         for elem in filter:
             elem.attributes['value'].value = id
