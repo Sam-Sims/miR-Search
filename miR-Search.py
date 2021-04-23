@@ -31,8 +31,12 @@ def run_search(args):
     # Load FASTA files
     fp = sequence_handler.FASTAParse(v_print)
     utr_seq_ob_list = fp.read_multi_3utr(input_utr)  # returns list of biopython seq objects for each record in utr file
-    mir_name = input_mir
-    input_mir = fp.read_mir(input_mir)
+    mir_name = input_mir # store name for later
+    if args.mir:
+        print("test")
+        input_mir = fp.read_mirbase(input_mir)
+    else:
+        input_mir = fp.read_mir(input_mir)
 
     # process mir
     mir = sequence_handler.MicroRNA(input_mir) # create a sequence handler object of input mir
@@ -99,6 +103,8 @@ def init_argparse():
                                default="http://www.ensembl.org/biomart/martservice?query=", required=False)
     pymart_parser.add_argument("--split", help="Splits the output into seperate files. Default FALSE. Ignores --output",
                                default=False, required=False, action="store_true")
+    pymart_parser.add_argument('-m', '--mir', action="store_true",
+                               help="Download miRNA sequences.", required=False)
     pymart_parser.add_argument('-v', '--verbosity', action="count",
                                help="Increase output verbosity (e.g., -vv is more than -v)")
 
@@ -106,6 +112,9 @@ def init_argparse():
     search_parser.add_argument("-i", "--input",
                                help="Specifies the input for miR-Search. First: miRNA file; Second: UTR file. Files in FASTA format.",
                                required=True, nargs=2, metavar=("miRNA", "UTR"))
+    search_parser.add_argument("-m", "--mir",
+                               help="Input mir is mirbase name",
+                               required=False, action="store_true")
     search_parser.add_argument('-v', '--verbosity', action="count", help="increase output verbosity (e.g., -vv is more than -v)")
     search_parser.add_argument('--cache', action="store_true",
                                help="Will use the gene_dict cache if there is one")
@@ -116,6 +125,8 @@ def init_argparse():
                                required=True, nargs=2, metavar=("sleuth", "miR-Search"))
     format_parser.add_argument('-v', '--verbosity', action="count",
                                help="increase output verbosity (e.g., -vv is more than -v)")
+    format_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
+                               default="out.csv", required=False)
 
     args = parser.parse_args()
     return args
@@ -124,7 +135,7 @@ def init_argparse():
 def run_format(args):
     sleuth = pb.prepare_sleuth_results(args.input[0])
     targets = pb.prepare_targets(args.input[1])
-    pb.merge(sleuth, targets)
+    pb.merge(sleuth, targets, args.output)
 
 
 def run_pymart(args):
@@ -132,6 +143,9 @@ def run_pymart(args):
     if args.scrub:
         print(args.scrub)
         pm.clean_utr(args.scrub)
+    elif args.mir:
+        pm.set_split()
+        pm.download_mart(int(args.threads))
     else:
         pm.download_mart(int(args.threads))
         if args.check:
