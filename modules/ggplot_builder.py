@@ -17,7 +17,7 @@ def prepare_targets(target_file):
     return df
 
 
-def merge(sleuth, targets):
+def merge(sleuth, targets, output):
     df_temp = targets.drop(targets.columns[[1,2,3]] , axis=1)
     targets_6mer= pd.merge(sleuth, df_temp, left_on = 'target_id', right_on = '6mer', how = 'inner')
     df_temp = targets.drop(targets.columns[[0, 2, 3]], axis=1)
@@ -46,7 +46,6 @@ def merge(sleuth, targets):
     targets_6mer = targets_6mer.drop(targets_6mer.columns[[2]], axis=1)
 
     sleuth= sleuth[sleuth['b'].notna()]
-    #sleuth = sleuth.drop(sleuth.columns[[0]], axis=1)
     print(sleuth)
     sleuth = sleuth[~sleuth.target_id.isin(targets_6mer.target_id)]
     sleuth = sleuth[~sleuth.target_id.isin(targets_7mera1.target_id)]
@@ -61,5 +60,4 @@ def merge(sleuth, targets):
     final_df = final_df.drop(final_df.columns[[0,3]], axis=1)
     print(final_df)
 
-
-    final_df.to_csv("out3.csv", index=False)
+    final_df.to_csv(output, index=False)
