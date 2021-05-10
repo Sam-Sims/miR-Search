@@ -94,7 +94,7 @@ class PYMart:
         with open(self._completed_path, "a") as f:
             f.write("gene, \n")
         f.close()
-        for record in SeqIO.parse(self.output_file, "fasta"):
+        for record in SeqIO.parse('UTR_trans.fasta', "fasta"):
             with open(self._completed_path, "a") as f:
                 f.write(record.id + "\n")
             f.close()
@@ -102,7 +102,7 @@ class PYMart:
 
     def _check(self):
         print("Comparing...")
-        human_genes = pd.read_csv(self.gene_list)
+        human_genes = pd.read_csv('master_gene_list.csv')
         completed = pd.read_csv(self._completed_path)
         completed['gene'] = completed['gene'].str[:15]
         completed.drop(completed.columns[1], axis=1, inplace=True)
@@ -125,8 +125,9 @@ class PYMart:
                 f.close()
 
     def clean_utr(self, file):  # This entire function is probably bad - look at the file writing
-        unique = True
-        remove_dup = False
+        unique = True # removes all duplicate IDs keeping those with longest seq only
+        remove_dup = True # removes duplicate actual sequences
+        has_transcripts = False # IF true will remove dup and keep longest if transcript ID present
         rm_list = []
 
         print("Cleaning UTR file...")
@@ -196,10 +197,10 @@ class PYMart:
                     print("Record seen")
                 print("done checking")
             print("all done - writing")
-            SeqIO.write(records, "cleaned_utr_test.fasta", "fasta")
+            SeqIO.write(records, "temp4.fasta", "fasta")
             print("done write")
 
-            print("Writing cleaned fasta file as cleaned_utr_test.fasta")
+            print("Writing cleaned fasta file as temp4.fasta")
             print("Done!")
 
         if unique:
@@ -224,11 +225,13 @@ class PYMart:
             '''
             seqs = {}
             recs = []
-            for seq_record in SeqIO.parse("cleaned_utr_test.fasta", "fasta"):
+            for seq_record in SeqIO.parse("temp4.fasta", "fasta"):
                 if seq_record.name not in seqs:
+                    print("Unique found: " + seq_record.name)
                     seqs[seq_record.name] = seq_record.seq
                 else:
                     if len(seqs[seq_record.name]) <= len(seq_record.seq):
+                        print("longer found")
                         seqs[seq_record.name] = seq_record.seq
                     print("Duplicate found, ", seq_record.name)
             for name, seq in seqs.items():
@@ -236,12 +239,49 @@ class PYMart:
                 rec = SeqRecord(Seq(str(seq)), id=name, description="")
                 recs.append(rec)
 
-            SeqIO.write(recs, "final.fasta", "fasta")
+            SeqIO.write(recs, "final_no_trans.fasta", "fasta")
+
+
+        if has_transcripts:
+            seqs = {}
+            recs = []
+            transcript = {}
+            for seq_record in SeqIO.parse("temp4.fasta", "fasta"):
+                if seq_record.name[0:15] not in seqs:
+                    print("Unique found: " + seq_record.name[0:15])
+                    seqs[seq_record.name[0:15]] = seq_record.seq
+                else:
+                    if len(seqs[seq_record.name[0:15]]) <= len(seq_record.seq):
+                        print("longer found")
+                        seqs[seq_record.name[0:15]] = seq_record.seq
+                    print("Duplicate found, ", seq_record.name[0:15])
+                transcript[seq_record.name] = seq_record.seq
+            for name, seq in seqs.items():
+                print(name)
+                rec = SeqRecord(Seq(str(seq)), id=name, description="")
+                recs.append(rec)
+
+            SeqIO.write(recs, "temp5.fasta", "fasta")
+            new_seqs = {}
+            new_recs =[]
+            for seq in SeqIO.parse("temp5.fasta", "fasta"):
+                for key, value in transcript.items():
+                    if seq.seq == str(value):
+                        print("Seq match")
+                        new_seqs[key] = seq.seq
+            for name1, seq1 in new_seqs.items():
+                print(name1)
+                new_rec = SeqRecord(Seq(str(seq1)), id=name1, description="")
+                new_recs.append(new_rec)
+
+            SeqIO.write(new_recs, "final_trans.fasta", "fasta")
+
 
         print("Removing temp files...")
         os.remove("temp.fasta")
         os.remove("temp_2.fasta")
         os.remove("temp3.fasta")
+        os.remove("temp4.fasta")
         print("FASTA file cleaned!")
         with open("removed_during_cleaning.txt", "a") as f:
             for i in rm_list:
