@@ -189,10 +189,12 @@ class TargetSearch:
         df["8mer"] = series
         df["8mer_location"] = series_loc
 
-        filename = str(self.mir_name + ".csv")
+        if not os.path.exists('mir_search_output'):
+            os.makedirs('mir_search_output')
+        filename = str("mir_search_output/" + self.mir_name + ".csv")
         df.to_csv(filename, index=False)
         print("Done!")
-        print("Target file saved as", self.mir_name, ".csv")
+        print("Target file saved as mir_search_output/", self.mir_name, ".csv")
 
 
 
