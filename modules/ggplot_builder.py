@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 
 def prepare_sleuth_results(sleuth_results):
@@ -59,5 +60,7 @@ def merge(sleuth, targets, output):
     final_df = pd.concat([targets_6mer, targets_7mera1, targets_7merm8, targets_8mer, sleuth])
     final_df = final_df.drop(final_df.columns[[0,3]], axis=1)
     print(final_df)
-
-    final_df.to_csv(output, index=False)
+    if not os.path.exists('ggplot_format_output'):
+        os.makedirs('ggplot_format_output')
+    filename = str("ggplot_format_output/" + output)
+    final_df.to_csv(filename, index=False)
