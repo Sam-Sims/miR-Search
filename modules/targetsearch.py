@@ -8,6 +8,7 @@ class TargetSearch:
         self.utr = utr_input  # list of biopython seq objects
         self.mir_name = mir_name
         self.v_print = v_print
+        self.genomic_coords = True # if true will store transcript coordinates
 
     def search_6mer(self, mir):
         print("Searching for 6mer:", mir)
@@ -36,20 +37,59 @@ class TargetSearch:
         print("Found ", len(result), " targets")
         return result
 
+    def convert_to_genome_coords(self, seed_locations, header):
+        split_header = header.split("|")
+        # some coords span multiple exons split by ; - take most downstream and most upstream for entire UTR
+        if ";" in split_header[3]:
+            print("UTR Spanning multiple exons found...")
+            split_coords = split_header[3].split(";")
+            downstream = min(split_coords)
+            utr_start = int(downstream)
+        else:
+            utr_start = int(split_header[3])
+        if ";" in split_header[4]:
+            print("UTR Spanning multiple exons found...")
+            split_coords = split_header[4].split(";")
+            upstream = max(split_coords)
+            utr_end = int(upstream)
+        else:
+            utr_end = int(split_header[4])
+
+
+        transcript_start = split_header[5]
+        transcript_end = split_header[6]
+        target_start = int(seed_locations[0])
+        target_end = int(seed_locations[1])
+        converted_genomic_start = utr_start + target_start
+        converted_genomic_end = utr_start + target_end
+        converted_list = [converted_genomic_start, converted_genomic_end]
+        return converted_list
+
+
     # Returns dict of gene id and location
     def _search(self, mir):
         master_list = {}
         for seq in self.utr:
             seed_locations = []
             seq_string = str(seq.seq)  # convert to string for regex
+            current_id = seq.name
             for i in re.finditer(mir, seq_string):
                 _start = int(i.start()) + 1 # add one to correct for starting at 0
                 _end = int(i.end()) + 1
                 _seed_locations = [_start, _end]
                 seed_locations.append(seq.id)
-                seed_locations.append(_seed_locations)
+                if self.genomic_coords:
+                    converted = self.convert_to_genome_coords(_seed_locations, current_id)
+                    print(converted)
+                    seed_locations.append(converted)
+                else:
+                    seed_locations.append(_seed_locations)
+                print("SEED LOCATIONS", seed_locations)
             if seed_locations:
-                master_list[seq.id] = _seed_locations
+                if self.genomic_coords:
+                    master_list[seq.id] = converted
+                else:
+                    master_list[seq.id] = _seed_locations
             else:
                 self.v_print(1, "No targets found")
         return master_list
@@ -191,7 +231,7 @@ class TargetSearch:
 
         if not os.path.exists('mir_search_output'):
             os.makedirs('mir_search_output')
-        filename = str("mir_search_output/" + self.mir_name + ".csv")
+        filename = str("mir_search_output/" + self.mir_name + "TEST.csv")
         df.to_csv(filename, index=False)
         print("Done!")
         print("Target file saved as mir_search_output/", self.mir_name, ".csv")
