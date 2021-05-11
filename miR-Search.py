@@ -2,7 +2,7 @@ import argparse
 import os
 import pickle
 
-from modules import pymart, ggplot_builder as pb, sequence_handler, targetsearch
+from modules import pymart, ggplot_builder as pb, sequence_handler, targetsearch, icshapeProcess as sp
 
 v_print = None
 
@@ -78,12 +78,13 @@ def init_argparse():
     pymart_parser = subparsers.add_parser('pymart')
     search_parser = subparsers.add_parser('search')
     format_parser = subparsers.add_parser('format')
+    process_parser = subparsers.add_parser('process')
 
     # PYMART ARGS
     # parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --input.", action="store_true")
     pymart_parser.add_argument("-i", "--input",
                                help="Specifies a list of ensembl gene IDs to download in CSV format. NOTE the first column must contain the IDs.",
-                               required=True)
+                               required=False)
     pymart_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
                                default="pymart_out.fasta", required=False)
     pymart_parser.add_argument("-c", "--check",
@@ -96,6 +97,9 @@ def init_argparse():
                                help="Specifies the number of threads pymart will use when downloading. Default = 50",
                                default=50, required=False)
     pymart_parser.add_argument("-s", "--scrub",
+                               help="Will clean the specified FASTA file. Recomended to be run after downloading.",
+                               metavar="file", required=False)
+    pymart_parser.add_argument("--verify",
                                help="Will clean the specified FASTA file. Recomended to be run after downloading.",
                                metavar="file", required=False)
     pymart_parser.add_argument("--url",
@@ -113,7 +117,7 @@ def init_argparse():
                                help="Specifies the input for miR-Search. First: miRNA file; Second: UTR file. Files in FASTA format.",
                                required=True, nargs=2, metavar=("miRNA", "UTR"))
     search_parser.add_argument("-m", "--mir",
-                               help="Input mir is mirbase name",
+                               help="Use if input mir is mirbase ID",
                                required=False, action="store_true")
     search_parser.add_argument('-v', '--verbosity', action="count", help="increase output verbosity (e.g., -vv is more than -v)")
     search_parser.add_argument('--cache', action="store_true",
@@ -128,8 +132,21 @@ def init_argparse():
     format_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
                                default="out.csv", required=False)
 
+    # PROCESS ARGS
+    process_parser.add_argument("-i", "--input",
+                               help="Specifies icSHAPE input file.",
+                               required=False)
+    process_parser.add_argument('-v', '--verbosity', action="count",
+                               help="increase output verbosity (e.g., -vv is more than -v)")
+
     args = parser.parse_args()
     return args
+
+def run_process(args):
+    #sp.return_transcripts(args.input)
+    #sp.match_transcript_id()
+    #sp.count()
+    sp.align_scores(args.input)
 
 
 def run_format(args):
@@ -139,10 +156,13 @@ def run_format(args):
 
 
 def run_pymart(args):
-    pm = pymart.PYMart(args.url, args.input, args.output, args.split)
+    pm = pymart.PYMart(args.url, args.input, args.output, args.split, args.mir)
+    #pm.run_check()
     if args.scrub:
         print(args.scrub)
         pm.clean_utr(args.scrub)
+    elif args.verify:
+        pm.run_verify(args.verify)
     elif args.mir:
         pm.set_split()
         pm.download_mart(int(args.threads))
@@ -174,6 +194,8 @@ def main():
         run_search(args)
     elif args.command == "format":
         run_format(args)
+    elif args.command == "process":
+        run_process(args)
     else:
         print("Please specify a task using pymart or search. Usage miR-Search pymart; miR-Search search")
 
