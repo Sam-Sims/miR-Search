@@ -78,23 +78,28 @@ class PYMart:
                     f.write(str(r.text) + '\n')
                 f.close()
 
-
-
+    def run_verify(self, input):
+        print("Running comparison check...")
+        if not os.path.exists('utr_check'):
+            os.makedirs('utr_check')
+        self._create_check_file(input)  # Extracts all fasta headers from the completed file including gene ID
+        self._check()  # Compares them agaisnt the original list of gene IDs
+        self._check_completion_stamp(input) # biomart returns own completion stamp with the response - check for any failures
 
     def run_check(self):
         print("Running comparison check...")
         if not os.path.exists('utr_check'):
             os.makedirs('utr_check')
-        self._create_check_file()  # Extracts all fasta headers from the completed file including gene ID
+        self._create_check_file(self.output_file)  # Extracts all fasta headers from the completed file including gene ID
         self._check()  # Compares them agaisnt the original list of gene IDs
-        self._check_completion_stamp() # biomart returns own completion stamp with the response - check for any failures
+        self._check_completion_stamp(self.output_file) # biomart returns own completion stamp with the response - check for any failures
 
-    def _create_check_file(self):
+    def _create_check_file(self, input):
         print("Generating check file...")
         with open(self._completed_path, "a") as f:
             f.write("gene, \n")
         f.close()
-        for record in SeqIO.parse('UTR_trans.fasta', "fasta"):
+        for record in SeqIO.parse(input, "fasta"):
             with open(self._completed_path, "a") as f:
                 f.write(record.id + "\n")
             f.close()
@@ -115,8 +120,8 @@ class PYMart:
             f.close()
         print("Failed gene IDs stored in utr_check/failed.csv")
 
-    def _check_completion_stamp(self):
-        for seq_record in SeqIO.parse(self.output_file, "fasta"):
+    def _check_completion_stamp(self, input):
+        for seq_record in SeqIO.parse(input, "fasta"):
             # print(seq_record.seq)
             if "failed" in str(seq_record.seq):
                 print(seq_record.name, " may of failed")
