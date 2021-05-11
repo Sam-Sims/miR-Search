@@ -136,6 +136,9 @@ def init_argparse():
     process_parser.add_argument("-i", "--input",
                                help="Specifies icSHAPE input file.",
                                required=False)
+    process_parser.add_argument("-u", "--utr",
+                                help="Specifies utr input file.",
+                                required=False)
     process_parser.add_argument('-v', '--verbosity', action="count",
                                help="increase output verbosity (e.g., -vv is more than -v)")
 
@@ -144,9 +147,9 @@ def init_argparse():
 
 def run_process(args):
     #sp.return_transcripts(args.input)
-    #sp.match_transcript_id()
-    #sp.count()
-    sp.align_scores(args.input)
+    #sp.match_transcript_id(args.utr)
+    sp.count()
+    #sp.align_scores(args.input)
 
 
 def run_format(args):
