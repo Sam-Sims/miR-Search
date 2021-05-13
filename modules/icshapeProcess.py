@@ -1,5 +1,7 @@
 import pandas as pd
 import csv
+from statistics import mean
+from operator import itemgetter
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -138,3 +140,30 @@ def process_target_shape_data(input, target_df):
                     shape_score_dict_8mer[curr_trans] = target_shape_score
     f.close()
     return shape_score_dict_6mer, shape_score_dict_7mera1, shape_score_dict_7merm8, shape_score_dict_8mer
+
+
+def sanitise_shape_scores(shape_score_dict):
+    to_delete = []
+    for key, value in shape_score_dict.items():
+        if "NULL" in value:
+            print("Transcript: " + key + " contains NULL values! Deleting...")
+            to_delete.append(key)
+    for i in to_delete:
+        del shape_score_dict[i]
+    shape_score_dict_float = dict((k, [float(s) for s in v]) for k, v in shape_score_dict.items()) # convert each shape score into a float
+    return shape_score_dict_float
+
+
+def average_scores(cleaned_shape_score_dict):
+    dict_avr = {}
+    for key, value in cleaned_shape_score_dict.items():
+        print(value)
+        dict_avr[key] = mean(value)
+    return dict_avr
+
+def return_percentage(dict_to_process):
+    sorted_dict = dict(sorted(dict_to_process.items(), key=lambda item: item[1])) # sort dict low to high
+    n = int(len(sorted_dict) * 0.20) # calc 20% length of dict
+    top_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1), reverse=True)[:n])
+    bot_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1))[:n])
+    return top_20, bot_20
