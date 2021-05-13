@@ -148,12 +148,32 @@ def init_argparse():
     args = parser.parse_args()
     return args
 
+
 def run_process(args):
     #sp.return_transcripts(args.input)
     #sp.match_transcript_id(args.utr)
     #sp.count()
     targetdf = sp.prepare_targets(args.target)
     dicts = sp.process_target_shape_data(args.input, targetdf)
+    print(len(dicts[0]))
+    cleaned_6mer_dict = sp.sanitise_shape_scores(dicts[0])
+    cleaned_7mera1_dict = sp.sanitise_shape_scores(dicts[1])
+    cleaned_7merm8_dict = sp.sanitise_shape_scores(dicts[2])
+    cleaned_8mer_dict = sp.sanitise_shape_scores(dicts[3])
+    avr_6mer_dict = sp.average_scores(cleaned_6mer_dict)
+    avr_7mera1_dict = sp.average_scores(cleaned_7mera1_dict)
+    avr_7merm8_dict = sp.average_scores(cleaned_7merm8_dict)
+    avr_8mer_dict = sp.average_scores(cleaned_8mer_dict)
+    combined_targets = dict(avr_6mer_dict)
+    combined_targets.update(avr_7mera1_dict)
+    combined_targets.update(avr_7merm8_dict)
+    combined_targets.update(avr_8mer_dict)
+    percentages = sp.return_percentage(combined_targets)
+    print(percentages[0])
+    print("/n")
+    print(percentages[1])
+
+    sleuth = pb.prepare_sleuth_results("sleuth_output/sleuth_results_hsa-let-7c-5p.csv")
 
 
 def run_format(args):
