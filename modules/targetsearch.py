@@ -8,7 +8,7 @@ class TargetSearch:
         self.utr = utr_input  # list of biopython seq objects
         self.mir_name = mir_name
         self.v_print = v_print
-        self.genomic_coords = True # if true will store transcript coordinates
+        self.genomic_coords = False # if true will store transcript coordinates
 
     def search_6mer(self, mir):
         print("Searching for 6mer:", mir)
@@ -74,8 +74,8 @@ class TargetSearch:
             seq_string = str(seq.seq)  # convert to string for regex
             current_id = seq.name
             for i in re.finditer(mir, seq_string):
-                _start = int(i.start()) + 1 # add one to correct for starting at 0
-                _end = int(i.end()) + 1
+                _start = int(i.start())
+                _end = int(i.end())
                 _seed_locations = [_start, _end]
                 seed_locations.append(seq.id)
                 if self.genomic_coords:
@@ -229,12 +229,12 @@ class TargetSearch:
         df["8mer"] = series
         df["8mer_location"] = series_loc
 
-        if not os.path.exists('mir_search_output'):
-            os.makedirs('mir_search_output')
-        filename = str("mir_search_output/" + self.mir_name + "TEST.csv")
+        if not os.path.exists('mir_search_output_trans'):
+            os.makedirs('mir_search_output_trans')
+        filename = str("mir_search_output_trans/" + self.mir_name + ".csv")
         df.to_csv(filename, index=False)
         print("Done!")
-        print("Target file saved as mir_search_output/", self.mir_name, ".csv")
+        print("Target file saved as mir_search_output_trans/", self.mir_name, ".csv")
 
 
 
