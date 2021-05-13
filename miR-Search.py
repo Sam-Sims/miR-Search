@@ -153,7 +153,7 @@ def run_process(args):
     #sp.match_transcript_id(args.utr)
     #sp.count()
     targetdf = sp.prepare_targets(args.target)
-    dicts = sp.align_target(args.input, targetdf)
+    dicts = sp.process_target_shape_data(args.input, targetdf)
 
 
 def run_format(args):

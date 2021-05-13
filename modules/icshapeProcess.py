@@ -68,6 +68,7 @@ def _return_dict(df, target_type):
     ret_dict = dict(zip(cleaned_list, df[location_string]))
     return ret_dict
 
+
 def gen_utr_hash_table(utr_file):
     utr_dict = {}
     for seq_record in SeqIO.parse(utr_file, "fasta"):
@@ -75,7 +76,20 @@ def gen_utr_hash_table(utr_file):
     return utr_dict
 
 
-def align_target(input, target_df):
+def align(hashed_utr, key, curr_trans_length, value, row):
+    utr_length = len(hashed_utr.get(key))
+    utr_start = curr_trans_length - utr_length
+    target_start_utr = int(value.split(",")[0][1:])
+    target_start_trans = utr_start + target_start_utr
+    target_end_utr_temp = value.split(",")[1][1:]
+    target_end_utr = int(target_end_utr_temp[:-1])
+    target_end_trans = utr_start + target_end_utr
+    shape_data = row[4:]
+    target_shape_score = shape_data[target_start_trans:target_end_trans]
+    return target_shape_score
+
+
+def process_target_shape_data(input, target_df):
     shape_6mer = {}
     dict_6mer = _return_dict(target_df, "6mer")
 
@@ -102,56 +116,24 @@ def align_target(input, target_df):
             for key, value in dict_6mer.items(): # maybe rework header info here to allow for a direct look up in dict (dict.get())
                 if curr_trans == _extract_data(key, 2):
                     print("6mer target data found for " + curr_trans)
-                    utr_length = len(hashed_utr.get(key))
-                    utr_start = curr_trans_length - utr_length
-                    target_start_utr = int(value.split(",")[0][1:])
-                    target_start_trans = utr_start + target_start_utr
-                    target_end_utr_temp = value.split(",")[1][1:]
-                    target_end_utr = int(target_end_utr_temp[:-1])
-                    target_end_trans = utr_start + target_end_utr
-                    shape_data = row[4:]
-                    target_shape_score = shape_data[target_start_trans:target_end_trans]
+                    target_shape_score = align(hashed_utr, key, curr_trans_length, value, row)
                     shape_score_dict_6mer[curr_trans] = target_shape_score
             for key, value in dict_7mera1.items():
                 if curr_trans == _extract_data(key, 2):
                     print("7mera1 target data found for " + curr_trans)
-                    utr_length = len(hashed_utr.get(key))
-                    utr_start = curr_trans_length - utr_length
-                    target_start_utr = int(value.split(",")[0][1:])
-                    target_start_trans = utr_start + target_start_utr
-                    target_end_utr_temp = value.split(",")[1][1:]
-                    target_end_utr = int(target_end_utr_temp[:-1])
-                    target_end_trans = utr_start + target_end_utr
-                    shape_data = row[4:]
-                    target_shape_score = shape_data[target_start_trans:target_end_trans]
+                    target_shape_score = align(hashed_utr, key, curr_trans_length, value, row)
                     #key_for_dict = curr_trans + " "
                     shape_score_dict_7mera1[curr_trans] = target_shape_score
             for key, value in dict_7merm8.items():
                 if curr_trans == _extract_data(key, 2):
                     print("7merm8 target data found for " + curr_trans)
-                    utr_length = len(hashed_utr.get(key))
-                    utr_start = curr_trans_length - utr_length
-                    target_start_utr = int(value.split(",")[0][1:])
-                    target_start_trans = utr_start + target_start_utr
-                    target_end_utr_temp = value.split(",")[1][1:]
-                    target_end_utr = int(target_end_utr_temp[:-1])
-                    target_end_trans = utr_start + target_end_utr
-                    shape_data = row[4:]
-                    target_shape_score = shape_data[target_start_trans:target_end_trans]
+                    target_shape_score = align(hashed_utr, key, curr_trans_length, value, row)
                     #key_for_dict = curr_trans + " "
                     shape_score_dict_7merm8[curr_trans] = target_shape_score
             for key, value in dict_8mer.items():
                 if curr_trans == _extract_data(key, 2):
                     print("8mer target data found for " + curr_trans)
-                    utr_length = len(hashed_utr.get(key))
-                    utr_start = curr_trans_length - utr_length
-                    target_start_utr = int(value.split(",")[0][1:])
-                    target_start_trans = utr_start + target_start_utr
-                    target_end_utr_temp = value.split(",")[1][1:]
-                    target_end_utr = int(target_end_utr_temp[:-1])
-                    target_end_trans = utr_start + target_end_utr
-                    shape_data = row[4:]
-                    target_shape_score = shape_data[target_start_trans:target_end_trans]
+                    target_shape_score = align(hashed_utr, key, curr_trans_length, value, row)
                     #key_for_dict = curr_trans + " "
                     shape_score_dict_8mer[curr_trans] = target_shape_score
     f.close()
