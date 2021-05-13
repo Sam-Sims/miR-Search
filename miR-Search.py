@@ -139,6 +139,9 @@ def init_argparse():
     process_parser.add_argument("-u", "--utr",
                                 help="Specifies utr input file.",
                                 required=False)
+    process_parser.add_argument("-t", "--target",
+                                help="Specifies target input file.",
+                                required=False)
     process_parser.add_argument('-v', '--verbosity', action="count",
                                help="increase output verbosity (e.g., -vv is more than -v)")
 
@@ -148,8 +151,9 @@ def init_argparse():
 def run_process(args):
     #sp.return_transcripts(args.input)
     #sp.match_transcript_id(args.utr)
-    sp.count()
-    #sp.align_scores(args.input)
+    #sp.count()
+    targetdf = sp.prepare_targets(args.target)
+    dicts = sp.align_target(args.input, targetdf)
 
 
 def run_format(args):
