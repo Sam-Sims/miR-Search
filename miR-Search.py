@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import argparse
 import os, sys
 import pickle
@@ -23,6 +24,90 @@ def print_menu():
     print("2. Run Search")
 
 
+
+def init_argparse():
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command")
+    pymart_parser = subparsers.add_parser('pymart')
+    search_parser = subparsers.add_parser('mir-search')
+    format_parser = subparsers.add_parser('ggplot-format')
+    process_parser = subparsers.add_parser('icshape-align')
+
+    # PYMART ARGS
+    # parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --input.", action="store_true")
+    pymart_parser.add_argument("-i", "--input",
+                               help="Specifies a list of ensembl gene IDs to download in CSV format. NOTE the first column must contain the IDs.",
+                               required=False)
+    pymart_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
+                               default="pymart_out.fasta", required=False)
+    pymart_parser.add_argument("-c", "--check",
+                               help="Will run a comparison check between the output gene sequence and the input gene list.",
+                               action="store_true", required=False)
+    pymart_parser.add_argument("-a", "--auto",
+                               help="Runs pymart in automode, performing the comparison check and file tidy (same as running -c -s) (recommended)",
+                               action="store_true", required=False)
+    pymart_parser.add_argument("-t", "--threads",
+                               help="Specifies the number of threads pymart will use when downloading. Default = 50",
+                               default=50, required=False)
+    pymart_parser.add_argument("-s", "--scrub",
+                               help="Will clean the specified FASTA file. Recomended to be run after downloading.",
+                               metavar="file", required=False)
+    pymart_parser.add_argument("--verify",
+                               help="Will clean the specified FASTA file. Recomended to be run after downloading.",
+                               metavar="file", required=False)
+    pymart_parser.add_argument("--url",
+                               help="Specifies the url to append xml query to. Defaults to -t 10 (recomended not to change this",
+                               default="http://www.ensembl.org/biomart/martservice?query=", required=False)
+    pymart_parser.add_argument("--split", help="Splits the output into seperate files. Default FALSE. Ignores --output",
+                               default=False, required=False, action="store_true")
+    pymart_parser.add_argument('-m', '--mir', action="store_true",
+                               help="Download miRNA sequences.", required=False)
+    pymart_parser.add_argument('-v', '--verbosity', action="count",
+                               help="Increase output verbosity (e.g., -vv is more than -v)")
+
+    # MIRSEARCH ARGS
+    search_parser.add_argument("-i", "--input",
+                               help="Specifies the input for miR-Search. First: miRNA file; Second: UTR file. Files in FASTA format.",
+                               required=True, nargs=2, metavar=("miRNA", "UTR"))
+    search_parser.add_argument("-m", "--mir",
+                               help="Use if input mir is mirbase ID",
+                               required=False, action="store_true")
+    search_parser.add_argument('-v', '--verbosity', action="count", help="increase output verbosity (e.g., -vv is more than -v)")
+    search_parser.add_argument('--cache', action="store_true",
+                               help="Will use the gene_dict cache if there is one")
+
+    # GGPLOT-FORMAT ARGS
+    format_parser.add_argument("-t", "--target",
+                               help="Runs the module in target mode - to process the output from the mir-search module. First: sleuth results; Second: mirR-Search output. Files in CSV format.",
+                               required=False, nargs=2, metavar=("sleuth", "miR-Search"))
+    format_parser.add_argument('-v', '--verbosity', action="count",
+                               help="increase output verbosity (e.g., -vv is more than -v)")
+    format_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
+                               default="out.csv", required=False)
+    format_parser.add_argument("-s", "--shape", help="Runs the module in shape mode - to process the output from the icshape-align module. First: sleuth results; Second: icshape-align output. Files in CSV format.", required=False, nargs=2, metavar=("sleuth", "icshape-align"))
+
+    # icSHAPE-align ARGS
+    process_parser.add_argument("-s", "--shape",
+                               help="Specifies icSHAPE input file.",
+                               required=False)
+    process_parser.add_argument("-u", "--utr",
+                                help="Specifies utr input file.",
+                                required=False)
+    process_parser.add_argument("-t", "--target",
+                                help="Specifies target input file.",
+                                required=False)
+    process_parser.add_argument('-v', '--verbosity', action="count",
+                               help="increase output verbosity (e.g., -vv is more than -v)")
+    process_parser.add_argument("-r", "--ret",
+                                help="Returns a list of transcripts from the icSHAPE output",
+                                required=False)
+    process_parser.add_argument("-m", "--match",
+                                help="Generates a new FASTA file containg only UTR sequences for that have shape coverage for. Takes UTR file from pymart as input - run icshape-align --ret first.",
+                                required=False)
+
+
+    args = parser.parse_args()
+    return args
 
 def run_search(args):
     input_mir = args.input[0]
@@ -72,135 +157,6 @@ def run_search(args):
     ts.print_targets(targets)
 
 
-def init_argparse():
-    parser = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(dest="command")
-    pymart_parser = subparsers.add_parser('pymart')
-    search_parser = subparsers.add_parser('search')
-    format_parser = subparsers.add_parser('format')
-    process_parser = subparsers.add_parser('process')
-
-    # PYMART ARGS
-    # parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --input.", action="store_true")
-    pymart_parser.add_argument("-i", "--input",
-                               help="Specifies a list of ensembl gene IDs to download in CSV format. NOTE the first column must contain the IDs.",
-                               required=False)
-    pymart_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
-                               default="pymart_out.fasta", required=False)
-    pymart_parser.add_argument("-c", "--check",
-                               help="Will run a comparison check between the output gene sequence and the input gene list.",
-                               action="store_true", required=False)
-    pymart_parser.add_argument("-a", "--auto",
-                               help="Runs pymart in automode, performing the comparison check and file tidy (same as running -c -s) (recommended)",
-                               action="store_true", required=False)
-    pymart_parser.add_argument("-t", "--threads",
-                               help="Specifies the number of threads pymart will use when downloading. Default = 50",
-                               default=50, required=False)
-    pymart_parser.add_argument("-s", "--scrub",
-                               help="Will clean the specified FASTA file. Recomended to be run after downloading.",
-                               metavar="file", required=False)
-    pymart_parser.add_argument("--verify",
-                               help="Will clean the specified FASTA file. Recomended to be run after downloading.",
-                               metavar="file", required=False)
-    pymart_parser.add_argument("--url",
-                               help="Specifies the url to append xml query to. Defaults to -t 10 (recomended not to change this",
-                               default="http://www.ensembl.org/biomart/martservice?query=", required=False)
-    pymart_parser.add_argument("--split", help="Splits the output into seperate files. Default FALSE. Ignores --output",
-                               default=False, required=False, action="store_true")
-    pymart_parser.add_argument('-m', '--mir', action="store_true",
-                               help="Download miRNA sequences.", required=False)
-    pymart_parser.add_argument('-v', '--verbosity', action="count",
-                               help="Increase output verbosity (e.g., -vv is more than -v)")
-
-    # MIRSEARCH ARGS
-    search_parser.add_argument("-i", "--input",
-                               help="Specifies the input for miR-Search. First: miRNA file; Second: UTR file. Files in FASTA format.",
-                               required=True, nargs=2, metavar=("miRNA", "UTR"))
-    search_parser.add_argument("-m", "--mir",
-                               help="Use if input mir is mirbase ID",
-                               required=False, action="store_true")
-    search_parser.add_argument('-v', '--verbosity', action="count", help="increase output verbosity (e.g., -vv is more than -v)")
-    search_parser.add_argument('--cache', action="store_true",
-                               help="Will use the gene_dict cache if there is one")
-
-    # FORMAT ARGS
-    format_parser.add_argument("-i", "--input",
-                               help="Specifies the input for the format. First: sleuth results; Second: mirR-Search output. Files in CSV format.",
-                               required=False, nargs=2, metavar=("sleuth", "miR-Search"))
-    format_parser.add_argument('-v', '--verbosity', action="count",
-                               help="increase output verbosity (e.g., -vv is more than -v)")
-    format_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
-                               default="out.csv", required=False)
-    format_parser.add_argument("-s", "--shape", help="Runs the format in shape mode", required=False, nargs=2, metavar=("sleuth", "percentages"))
-
-    # PROCESS ARGS
-    process_parser.add_argument("-i", "--input",
-                               help="Specifies icSHAPE input file.",
-                               required=False)
-    process_parser.add_argument("-u", "--utr",
-                                help="Specifies utr input file.",
-                                required=False)
-    process_parser.add_argument("-t", "--target",
-                                help="Specifies target input file.",
-                                required=False)
-    process_parser.add_argument('-v', '--verbosity', action="count",
-                               help="increase output verbosity (e.g., -vv is more than -v)")
-
-    args = parser.parse_args()
-    return args
-
-
-def run_process(args):
-    #sp.return_transcripts(args.input)
-    #sp.match_transcript_id(args.utr)
-    #sp.count()
-    targetdf = sp.prepare_targets(args.target)
-    dicts = sp.process_target_shape_data(args.input, targetdf)
-    cleaned_6mer_dict = sp.sanitise_shape_scores(dicts[0])
-    cleaned_7mera1_dict = sp.sanitise_shape_scores(dicts[1])
-    cleaned_7merm8_dict = sp.sanitise_shape_scores(dicts[2])
-    cleaned_8mer_dict = sp.sanitise_shape_scores(dicts[3])
-    '''
-    avr_6mer_dict = sp.average_scores(cleaned_6mer_dict)
-    avr_7mera1_dict = sp.average_scores(cleaned_7mera1_dict)
-    avr_7merm8_dict = sp.average_scores(cleaned_7merm8_dict)
-    avr_8mer_dict = sp.average_scores(cleaned_8mer_dict)
-    '''
-    average_6mer_dict = sp.average_scores(cleaned_6mer_dict)
-    average_7mera1_dict = sp.average_scores(cleaned_7mera1_dict)
-    average_7merm8_dict = sp.average_scores(cleaned_7merm8_dict)
-    average_8mer_dict = sp.average_scores(cleaned_8mer_dict)
-    
-    combined_targets = dict(average_6mer_dict)
-    combined_targets.update(average_7mera1_dict)
-    combined_targets.update(average_7merm8_dict)
-    combined_targets.update(average_8mer_dict)
-    percentages = sp.return_percentage(combined_targets)
-    filename = "pickles/" + args.target.split("/")[6][:-4] + ".pickle"
-    filename_sysout = "dict_out/" + args.target.split("/")[6][:-4] + ".txt"
-    print(filename)
-    with open(filename, 'wb') as handle:
-        pickle.dump(percentages, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    sys.stdout = open(filename_sysout, "a")
-    print(percentages)
-    sys.stdout.close()
-
-
-def run_format(args):
-    if args.shape:
-        print("shape")
-        sleuth = pb.prepare_sleuth_results_icshape(args.shape[0])
-        with open(args.shape[1], 'rb') as handle:
-            percent_dict = pickle.load(handle)
-        handle.close()
-        shape = pb.prepare_shape_data(percent_dict)
-        pb.merge_shape(sleuth, shape, args.output)
-    else:
-        sleuth = pb.prepare_sleuth_results(args.input[0])
-        targets = pb.prepare_targets(args.input[1])
-        pb.merge(sleuth, targets, args.output)
-
-
 def run_pymart(args):
     pm = pymart.PYMart(args.url, args.input, args.output, args.split, args.mir)
     #pm.run_check()
@@ -221,10 +177,50 @@ def run_pymart(args):
             pm.clean_utr(args.output)
 
 
+def run_process(args):
+    if args.ret:
+        sp.return_transcripts(args.ret)
+    elif args.match:
+        sp.match_transcript_id(args.match)
+    elif args.shape and args.target and args.utr:
+        sp.auto_process(args)
+    else:
+        print("Please speicify a mode")
+
+
+
+def run_format(args):
+    if args.shape:
+        sleuth = pb.prepare_sleuth_results_icshape(args.shape[0])
+        with open(args.shape[1], 'rb') as handle:
+            percent_dict = pickle.load(handle)
+        handle.close()
+        shape = pb.prepare_shape_data(percent_dict)
+        pb.merge_shape(sleuth, shape, args.output)
+    elif args.target:
+        sleuth = pb.prepare_sleuth_results(args.input[0])
+        targets = pb.prepare_targets(args.input[1])
+        pb.merge(sleuth, targets, args.output)
+    else:
+        print("Error - mode not supplied. Use -t or -s to specify a mode. -h for more information")
+        sys.exit()
+
+
 def main():
     args = init_argparse()
+    if args.command == "pymart":
+        run_pymart(args)
+    elif args.command == "mir-search":
+        run_search(args)
+    elif args.command == "ggplot-format":
+        run_format(args)
+    elif args.command == "icshape-align":
+        run_process(args)
+    else:
+        print("Please specify a module to run. miR-Search -h for more details")
+        sys.exit()
 
-    if args.verbosity: # if verbose the define print function use v_print(level, string) level =1 info, 2=warn, 3=error
+    if args.verbosity:  # if verbose the define print function use v_print(level, string) level =1 info, 2=warn, 3=error
         def _v_print(*verb_args):
             if verb_args[0] > (3 - args.verbosity):
                 print(verb_args[1])
@@ -233,17 +229,6 @@ def main():
 
     global v_print
     v_print = _v_print
-
-    if args.command == "pymart":
-        run_pymart(args)
-    elif args.command == "search":
-        run_search(args)
-    elif args.command == "format":
-        run_format(args)
-    elif args.command == "process":
-        run_process(args)
-    else:
-        print("Please specify a task using pymart or search. Usage miR-Search pymart; miR-Search search")
 
 
 if __name__ == "__main__":
