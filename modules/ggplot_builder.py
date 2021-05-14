@@ -71,9 +71,17 @@ def prepare_sleuth_results_icshape(sleuth_results):
     return df
 
 def prepare_shape_data(shape_dict):
-    df_top = pd.DataFrame(shape_dict[0].items(), columns=['transcript', 'shape_score'])
-    df_bot = pd.DataFrame(shape_dict[1].items(), columns=['transcript', 'shape_score'])
-    return df_top, df_bot
+    combined_df_top = pd.DataFrame(columns=['transcript', 'shape_score'])
+    combined_df_bot = pd.DataFrame(columns=['transcript', 'shape_score'])
+    for key, value in shape_dict.items():
+        print("Reading ", key)
+        top = value.get("top")
+        bot = value.get("bot")
+        df_top = pd.DataFrame(top.items(), columns=['transcript', 'shape_score'])
+        df_bot = pd.DataFrame(bot.items(), columns=['transcript', 'shape_score'])
+        combined_df_top = combined_df_top.append(df_top)
+        combined_df_bot = combined_df_bot.append(df_bot)
+    return combined_df_top, combined_df_bot
 
 def merge_shape(sleuth, shape, output):
     merge_top = pd.merge(sleuth, shape[0], left_on='target_id', right_on='transcript', how='inner')
