@@ -67,7 +67,7 @@ def merge(sleuth, targets, output):
 
 def prepare_sleuth_results_icshape(sleuth_results):
     df = pd.read_csv(sleuth_results)
-    df = df.drop(df.columns[[0,4,5,7,8,9,10,11,12,13]], axis=1)
+    df = df.drop(df.columns[[0,4,5,7,8,9,10,11,12]], axis=1)
     return df
 
 def prepare_shape_data(shape_dict):
@@ -79,23 +79,27 @@ def merge_shape(sleuth, shape, output):
     merge_top = pd.merge(sleuth, shape[0], left_on='target_id', right_on='transcript', how='inner')
     merge_top = merge_top[merge_top['b'].notna()]
 
+
     merge_bot = pd.merge(sleuth, shape[1], left_on='target_id', right_on='transcript', how='inner')
     merge_bot = merge_bot[merge_bot['b'].notna()]
-    #merge_top = merge_top.drop(merge_top.columns[[0,1,2,4]], axis=1)
+
     merge_top['shape_score'] = "High Structured (Top 20%) N = " + str(len(merge_top)) +")"
-    #merge_bot = merge_bot.drop(merge_bot.columns[[0, 1, 2, 4]], axis=1)
+
     merge_bot['shape_score'] = "Low Structured (Bottom 20%) N = " + str(len(merge_bot)) + ")"
 
-    sleuth = sleuth[sleuth['b'].notna()]
-    sleuth = sleuth[~sleuth.target_id.isin(merge_top.target_id)]
-    sleuth = sleuth[~sleuth.target_id.isin(merge_bot.target_id)]
-    sleuth['se_b'] = 'non-targets (N= ' + str(len(sleuth)) + ")"
-    sleuth.rename(columns={"se_b": "shape_score"}, inplace=True)
-    print(sleuth)
+    trans_df = pd.read_csv("transcipts_with_shape_data.txt")
+    merge_sleuth = pd.merge(sleuth, trans_df, left_on='target_id', right_on='transcripts', how='inner')
+    merge_sleuth = merge_sleuth[merge_sleuth['b'].notna()]
+    merge_sleuth = merge_sleuth[~merge_sleuth.target_id.isin(merge_top.target_id)]
+    merge_sleuth = merge_sleuth[~merge_sleuth.target_id.isin(merge_bot.target_id)]
+    merge_sleuth['final_sigma_sq'] = 'non-targets (N= ' + str(len(merge_sleuth)) + ")"
+    merge_sleuth.rename(columns={"final_sigma_sq": "shape_score"}, inplace=True)
+    merge_top = merge_top.drop(merge_top.columns[[0,1,2,4,5]], axis=1)
+    merge_bot = merge_bot.drop(merge_bot.columns[[0, 1, 2, 4, 5]], axis=1)
+    merge_sleuth = merge_sleuth.drop(merge_sleuth.columns[[0, 1, 2, 5]], axis=1)
 
-    final_df = pd.concat([merge_top, merge_bot, sleuth])
-    print(final_df)
-    final_df = final_df.drop(final_df.columns[[0,1,2,4]], axis=1)
+
+    final_df = pd.concat([merge_top, merge_bot, merge_sleuth])
     final_df.rename(columns={"shape_score": "type"}, inplace=True)
     print(final_df)
     if not os.path.exists('ggplot_format_output_shape'):
