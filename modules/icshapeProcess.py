@@ -171,6 +171,8 @@ def sum_scores(cleaned_shape_score_dict):
 def return_percentage(dict_to_process):
     sorted_dict = dict(sorted(dict_to_process.items(), key=lambda item: item[1])) # sort dict low to high
     n = int(len(sorted_dict) * 0.20) # calc 20% length of dict
-    top_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1), reverse=True)[:n])
-    bot_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1))[:n])
+    top_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1))[:n])
+    bot_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1), reverse=True)[:n])
+    print(top_20)
+    print(bot_20)
     return top_20, bot_20
