@@ -1,5 +1,5 @@
 import argparse
-import os
+import os, sys
 import pickle
 
 from modules import pymart, ggplot_builder as pb, sequence_handler, targetsearch, icshapeProcess as sp
@@ -126,11 +126,12 @@ def init_argparse():
     # FORMAT ARGS
     format_parser.add_argument("-i", "--input",
                                help="Specifies the input for the format. First: sleuth results; Second: mirR-Search output. Files in CSV format.",
-                               required=True, nargs=2, metavar=("sleuth", "miR-Search"))
+                               required=False, nargs=2, metavar=("sleuth", "miR-Search"))
     format_parser.add_argument('-v', '--verbosity', action="count",
                                help="increase output verbosity (e.g., -vv is more than -v)")
     format_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
                                default="out.csv", required=False)
+    format_parser.add_argument("-s", "--shape", help="Runs the format in shape mode", required=False, nargs=2, metavar=("sleuth", "percentages"))
 
     # PROCESS ARGS
     process_parser.add_argument("-i", "--input",
@@ -155,31 +156,49 @@ def run_process(args):
     #sp.count()
     targetdf = sp.prepare_targets(args.target)
     dicts = sp.process_target_shape_data(args.input, targetdf)
-    print(len(dicts[0]))
     cleaned_6mer_dict = sp.sanitise_shape_scores(dicts[0])
     cleaned_7mera1_dict = sp.sanitise_shape_scores(dicts[1])
     cleaned_7merm8_dict = sp.sanitise_shape_scores(dicts[2])
     cleaned_8mer_dict = sp.sanitise_shape_scores(dicts[3])
+    '''
     avr_6mer_dict = sp.average_scores(cleaned_6mer_dict)
     avr_7mera1_dict = sp.average_scores(cleaned_7mera1_dict)
     avr_7merm8_dict = sp.average_scores(cleaned_7merm8_dict)
     avr_8mer_dict = sp.average_scores(cleaned_8mer_dict)
-    combined_targets = dict(avr_6mer_dict)
-    combined_targets.update(avr_7mera1_dict)
-    combined_targets.update(avr_7merm8_dict)
-    combined_targets.update(avr_8mer_dict)
+    '''
+    average_6mer_dict = sp.average_scores(cleaned_6mer_dict)
+    average_7mera1_dict = sp.average_scores(cleaned_7mera1_dict)
+    average_7merm8_dict = sp.average_scores(cleaned_7merm8_dict)
+    average_8mer_dict = sp.average_scores(cleaned_8mer_dict)
+    
+    combined_targets = dict(average_6mer_dict)
+    combined_targets.update(average_7mera1_dict)
+    combined_targets.update(average_7merm8_dict)
+    combined_targets.update(average_8mer_dict)
     percentages = sp.return_percentage(combined_targets)
-    print(percentages[0])
-    print("/n")
-    print(percentages[1])
-
-    sleuth = pb.prepare_sleuth_results("sleuth_output/sleuth_results_hsa-let-7c-5p.csv")
+    filename = "pickles/" + args.target.split("/")[6][:-4] + ".pickle"
+    filename_sysout = "dict_out/" + args.target.split("/")[6][:-4] + ".txt"
+    print(filename)
+    with open(filename, 'wb') as handle:
+        pickle.dump(percentages, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    sys.stdout = open(filename_sysout, "a")
+    print(percentages)
+    sys.stdout.close()
 
 
 def run_format(args):
-    sleuth = pb.prepare_sleuth_results(args.input[0])
-    targets = pb.prepare_targets(args.input[1])
-    pb.merge(sleuth, targets, args.output)
+    if args.shape:
+        print("shape")
+        sleuth = pb.prepare_sleuth_results_icshape(args.shape[0])
+        with open(args.shape[1], 'rb') as handle:
+            percent_dict = pickle.load(handle)
+        handle.close()
+        shape = pb.prepare_shape_data(percent_dict)
+        pb.merge_shape(sleuth, shape, args.output)
+    else:
+        sleuth = pb.prepare_sleuth_results(args.input[0])
+        targets = pb.prepare_targets(args.input[1])
+        pb.merge(sleuth, targets, args.output)
 
 
 def run_pymart(args):
