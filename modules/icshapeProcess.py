@@ -2,6 +2,7 @@ import pandas as pd
 import csv
 from statistics import mean
 from operator import itemgetter
+import pickle, sys
 
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
@@ -91,7 +92,7 @@ def align(hashed_utr, key, curr_trans_length, value, row):
     return target_shape_score
 
 
-def process_target_shape_data(input, target_df):
+def process_target_shape_data(input, target_df, utr):
     shape_6mer = {}
     dict_6mer = _return_dict(target_df, "6mer")
 
@@ -104,7 +105,8 @@ def process_target_shape_data(input, target_df):
     shape_8mer = {}
     dict_8mer = _return_dict(target_df, "8mer")
 
-    hashed_utr = gen_utr_hash_table("Transcripts/final_trans.fasta") # hash utr file for easy look up - dont have to iterate it each time
+
+    hashed_utr = gen_utr_hash_table(utr) # hash utr file for easy look up - dont have to iterate it each time
     shape_score_dict_6mer = {}
     shape_score_dict_7mera1 = {}
     shape_score_dict_7merm8 = {}
@@ -139,40 +141,85 @@ def process_target_shape_data(input, target_df):
                     #key_for_dict = curr_trans + " "
                     shape_score_dict_8mer[curr_trans] = target_shape_score
     f.close()
-    return shape_score_dict_6mer, shape_score_dict_7mera1, shape_score_dict_7merm8, shape_score_dict_8mer
+    combined_dict = {"6mer": shape_score_dict_6mer, "7mera1": shape_score_dict_7mera1,
+                     "7merm8": shape_score_dict_7merm8, "8mer": shape_score_dict_8mer} # creates a dict of dict first
+    return combined_dict
 
 
 def sanitise_shape_scores(shape_score_dict):
-    to_delete = []
-    for key, value in shape_score_dict.items():
-        if "NULL" in value:
-            print("Transcript: " + key + " contains NULL values! Deleting...")
-            to_delete.append(key)
-    for i in to_delete:
-        del shape_score_dict[i]
-    shape_score_dict_float = dict((k, [float(s) for s in v]) for k, v in shape_score_dict.items()) # convert each shape score into a float
-    return shape_score_dict_float
+    combined_dict_cleaned = {}
+    for key, value in shape_score_dict.items(): # for each item in combined dictionary
+        to_delete = []
+        print("Sanitising: ", key)
+        for key2, value2 in value.items():
+            if "NULL" in value2:
+                print("Transcript: " + key2 + " contains NULL values!")
+                to_delete.append(key2)
+        print("BEFORE ", len(shape_score_dict.get(key)))
+        for i in to_delete:
+            print("Deleting ", i)
+            del shape_score_dict.get(key)[i]
+        print("AFTER ", len(shape_score_dict.get(key)))
+        print(key)
+        shape_score_dict_float = dict((k, [float(s) for s in v]) for k, v in shape_score_dict.get(key).items()) # convert each shape score into a float
+        combined_dict_cleaned[key] = shape_score_dict_float
+    print(combined_dict_cleaned)
+    return combined_dict_cleaned
 
 
 def average_scores(cleaned_shape_score_dict):
     dict_avr = {}
     for key, value in cleaned_shape_score_dict.items():
-        print(value)
         dict_avr[key] = mean(value)
     return dict_avr
 
 def sum_scores(cleaned_shape_score_dict):
     dict_sum = {}
     for key, value in cleaned_shape_score_dict.items():
-        print(value)
         dict_sum[key] = sum(value)
     return dict_sum
 
+def calculate_combined_shape_score(cleaned_dict, mode):
+    # MODES CAN BE:
+    # "avr" for average
+    # "sum" for sum
+    combined_dict = {}
+    if mode == "avr":
+        for key, value in cleaned_dict.items():
+            print("Calculating " + key + " in mode ", mode)
+            combined_dict[key] = average_scores(value)
+    elif mode == "sum":
+        for key, value in cleaned_dict.items():
+            print("Calculating " + key + " in mode ", mode)
+            combined_dict[key] = sum_scores(value)
+    return combined_dict
+
+
 def return_percentage(dict_to_process):
-    sorted_dict = dict(sorted(dict_to_process.items(), key=lambda item: item[1])) # sort dict low to high
-    n = int(len(sorted_dict) * 0.20) # calc 20% length of dict
-    top_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1))[:n])
-    bot_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1), reverse=True)[:n])
-    print(top_20)
-    print(bot_20)
-    return top_20, bot_20
+    combined_dict = {}
+    for key, value in dict_to_process.items():
+        temp_dict = {}
+        print("Sorting: ", key)
+        sorted_dict = dict(sorted(value.items(), key=lambda item: item[1])) # sort dict low to high
+        n = int(len(sorted_dict) * 0.20) # calc 20% length of dict
+        top_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1))[:n])
+        bot_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1), reverse=True)[:n])
+        temp_dict["top"] = top_20
+        temp_dict["bot"] = bot_20
+        combined_dict[key] = temp_dict
+    return combined_dict
+
+def auto_process(args):
+    targetdf = prepare_targets(args.target)
+    shape_dict = process_target_shape_data(args.shape, targetdf, args.utr)
+    cleaned_dict = sanitise_shape_scores(shape_dict)
+    combined_dict = calculate_combined_shape_score(cleaned_dict, "avr")
+    percentages = return_percentage(combined_dict)
+    filename = "pickles/" + args.target.split("/")[6][:-4] + ".pickle"
+    filename_sysout = "dict_out/" + args.target.split("/")[6][:-4] + ".txt"
+    print(filename)
+    with open(filename, 'wb') as handle:
+        pickle.dump(percentages, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    sys.stdout = open(filename_sysout, "a")
+    print(percentages)
+    sys.stdout.close()
