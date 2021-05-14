@@ -161,6 +161,13 @@ def average_scores(cleaned_shape_score_dict):
         dict_avr[key] = mean(value)
     return dict_avr
 
+def sum_scores(cleaned_shape_score_dict):
+    dict_sum = {}
+    for key, value in cleaned_shape_score_dict.items():
+        print(value)
+        dict_sum[key] = sum(value)
+    return dict_sum
+
 def return_percentage(dict_to_process):
     sorted_dict = dict(sorted(dict_to_process.items(), key=lambda item: item[1])) # sort dict low to high
     n = int(len(sorted_dict) * 0.20) # calc 20% length of dict
