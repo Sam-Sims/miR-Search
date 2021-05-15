@@ -40,9 +40,6 @@ def init_argparse():
                                required=False)
     pymart_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
                                default="pymart_out.fasta", required=False)
-    pymart_parser.add_argument("-c", "--check",
-                               help="Will run a comparison check between the output gene sequence and the input gene list.",
-                               action="store_true", required=False)
     pymart_parser.add_argument("-a", "--auto",
                                help="Runs pymart in automode, performing the comparison check and file tidy (same as running -c -s) (recommended)",
                                action="store_true", required=False)
@@ -60,8 +57,6 @@ def init_argparse():
                                default="http://www.ensembl.org/biomart/martservice?query=", required=False)
     pymart_parser.add_argument("--split", help="Splits the output into seperate files. Default FALSE. Ignores --output",
                                default=False, required=False, action="store_true")
-    pymart_parser.add_argument('-m', '--mir', action="store_true",
-                               help="Download miRNA sequences.", required=False)
     pymart_parser.add_argument('-v', '--verbosity', action="count",
                                help="Increase output verbosity (e.g., -vv is more than -v)")
 
@@ -159,19 +154,12 @@ def run_search(args):
 
 def run_pymart(args):
     pm = pymart.PYMart(args.url, args.input, args.output, args.split, args.mir)
-    #pm.run_check()
     if args.scrub:
-        print(args.scrub)
         pm.clean_utr(args.scrub)
     elif args.verify:
         pm.run_verify(args.verify)
-    elif args.mir:
-        pm.set_split()
-        pm.download_mart(int(args.threads))
     else:
         pm.download_mart(int(args.threads))
-        if args.check:
-            pm.run_check()
         if args.auto:
             pm.run_check()
             pm.clean_utr(args.output)

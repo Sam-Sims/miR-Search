@@ -21,7 +21,6 @@ class PYMart:
         self._completed_path = "utr_check/completed.csv"
         self.output_file = output_file
         self.split = split
-        self.mir = mir
 
     def set_split(self):
         self.split = True
@@ -49,10 +48,7 @@ class PYMart:
                 f.flush()
 
     def _worker(self, id):
-        if self.mir:
-            mydoc = minidom.parse('templates/template_mir.xml')
-        else:
-            mydoc = minidom.parse('templates/template_utr.xml')
+        mydoc = minidom.parse('templates/template_utr.xml')
         filter = mydoc.getElementsByTagName('Filter')
         for elem in filter:
             elem.attributes['value'].value = id
@@ -130,9 +126,9 @@ class PYMart:
                 f.close()
 
     def clean_utr(self, file):  # This entire function is probably bad - look at the file writing
-        unique = True # removes all duplicate IDs keeping those with longest seq only
+        unique = False # removes all duplicate IDs keeping those with longest seq only
         remove_dup = True # removes duplicate actual sequences
-        has_transcripts = False # IF true will remove dup and keep longest if transcript ID present
+        has_transcripts = True # IF true will remove dup and keep longest if transcript ID present
         rm_list = []
 
         print("Cleaning UTR file...")
