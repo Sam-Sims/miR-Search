@@ -1,19 +1,18 @@
 import multiprocessing as mp
+import os
+import re
 from multiprocessing.dummy import Pool as ThreadPool
 from xml.dom import minidom
-from Bio.SeqRecord import SeqRecord
-from Bio.Seq import Seq
 
-import os
 import pandas as pd
-import re
 import requests
-import sys
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 
 class PYMart:
-    def __init__(self, server, genelist, output_file, split, mir):
+    def __init__(self, server, genelist, output_file, split, v_print):
         manager = mp.Manager()
         self._q = manager.Queue()
         self._server = server
@@ -21,6 +20,7 @@ class PYMart:
         self._completed_path = "utr_check/completed.csv"
         self.output_file = output_file
         self.split = split
+        self.vprint = v_print
 
     def set_split(self):
         self.split = True
@@ -80,15 +80,18 @@ class PYMart:
             os.makedirs('utr_check')
         self._create_check_file(input)  # Extracts all fasta headers from the completed file including gene ID
         self._check()  # Compares them agaisnt the original list of gene IDs
-        self._check_completion_stamp(input) # biomart returns own completion stamp with the response - check for any failures
+        self._check_completion_stamp(
+            input)  # biomart returns own completion stamp with the response - check for any failures
 
-    def run_check(self):
+    def run_check(self):  # funct for auto mode
         print("Running comparison check...")
         if not os.path.exists('utr_check'):
             os.makedirs('utr_check')
-        self._create_check_file(self.output_file)  # Extracts all fasta headers from the completed file including gene ID
+        self._create_check_file(
+            self.output_file)  # Extracts all fasta headers from the completed file including gene ID
         self._check()  # Compares them agaisnt the original list of gene IDs
-        self._check_completion_stamp(self.output_file) # biomart returns own completion stamp with the response - check for any failures
+        self._check_completion_stamp(
+            self.output_file)  # biomart returns own completion stamp with the response - check for any failures
 
     def _create_check_file(self, input):
         print("Generating check file...")
@@ -126,9 +129,9 @@ class PYMart:
                 f.close()
 
     def clean_utr(self, file):  # This entire function is probably bad - look at the file writing
-        unique = False # removes all duplicate IDs keeping those with longest seq only
-        remove_dup = True # removes duplicate actual sequences
-        has_transcripts = True # IF true will remove dup and keep longest if transcript ID present
+        unique = False  # removes all duplicate IDs keeping those with longest seq only - shouldnt be true if unique_header true
+        remove_dup = False  # removes duplicates by comparing sequences
+        unique_header = True  # IF true will remove dup and keep longest if transcript ID present
         rm_list = []
 
         print("Cleaning UTR file...")
@@ -169,91 +172,55 @@ class PYMart:
             f.write(new_file_string)
         f.close()
 
-
-        '''
-        sequences = {}
-        for seq_record in SeqIO.parse("pymart_out.fasta", "fasta"):
-            sequence = str(seq_record.seq).upper()
-            if sequence not in sequences:
-                sequences[sequence] = seq_record
-            else:
-                print("No dupe")
-        print(sequences)
-        with open("cleaned_utr_test.fasta", "w+") as output_file:
-            # Just read the hash table and write on the file as a fasta format
-            for sequence in sequences:
-                output_file.write(">" + str(sequences[sequence].seq))
-        '''
         if remove_dup:
             # REMOVES DUPLICATES - takes long time
             # Python sets might be better here - to look into
+            print("Removing duplicate sequences")
             seen = []
             records = []
             for record in SeqIO.parse("temp3.fasta", "fasta"):
                 if str(record.seq) not in seen:
-                    print(record.id, " not seen")
+                    self.vprint(1, record.id + " not seen")
                     seen.append(str(record.seq))
                     records.append(record)
                 else:
-                    print("Record seen")
-                print("done checking")
-            print("all done - writing")
+                    self.vprint(1, "Record seen: ", record)
             SeqIO.write(records, "temp4.fasta", "fasta")
-            print("done write")
 
-            print("Writing cleaned fasta file as temp4.fasta")
+            self.vprint(1, "Writing cleaned fasta file as temp4.fasta")
             print("Done!")
 
         if unique:
-            '''
-            id_seen = []
-            id_records = []
-            dup = []
-            for record in SeqIO.parse("cleaned_utr_test.fasta", "fasta"):
-                if str(record.id) not in id_seen:
-                    print(record.id, " not seen")
-                    id_seen.append(str(record.id))
-                else:
-                    print(record.id, "Duplicate")
-                    if record.id not in dup:
-                        dup.append(record.id)
-                    else:
-                        print("Already in dup list")
-            print(dup)
-            for record in SeqIO.parse("cleaned_utr_test.fasta", "fasta"):
-                if str(record.id) in dup:
-                    print("Dup found")
-            '''
+            print("Generating unique UTR file")  # this removes all duplicate gene headers leaving the longest sequence
             seqs = {}
             recs = []
             for seq_record in SeqIO.parse("temp4.fasta", "fasta"):
                 if seq_record.name not in seqs:
-                    print("Unique found: " + seq_record.name)
+                    self.vprint(1, "Unique found: " + seq_record.name)
                     seqs[seq_record.name] = seq_record.seq
                 else:
                     if len(seqs[seq_record.name]) <= len(seq_record.seq):
-                        print("longer found")
+                        self.vprint(1, "Longer record found")
                         seqs[seq_record.name] = seq_record.seq
                     print("Duplicate found, ", seq_record.name)
             for name, seq in seqs.items():
-                print(name)
                 rec = SeqRecord(Seq(str(seq)), id=name, description="")
                 recs.append(rec)
-
             SeqIO.write(recs, "final_no_trans.fasta", "fasta")
+            print("Done!")
 
-
-        if has_transcripts:
+        if unique_header:  # same as above function but if headers are not unique (i.e containing transcript ids)
+            print("Generating unique UTR file (unique header mode)")
             seqs = {}
             recs = []
             transcript = {}
             for seq_record in SeqIO.parse("temp4.fasta", "fasta"):
                 if seq_record.name[0:15] not in seqs:
-                    print("Unique found: " + seq_record.name[0:15])
+                    self.vprint(1, "Unique found: " + seq_record.name[0:15])
                     seqs[seq_record.name[0:15]] = seq_record.seq
                 else:
                     if len(seqs[seq_record.name[0:15]]) <= len(seq_record.seq):
-                        print("longer found")
+                        self.vprint(1, "longer record found")
                         seqs[seq_record.name[0:15]] = seq_record.seq
                     print("Duplicate found, ", seq_record.name[0:15])
                 transcript[seq_record.name] = seq_record.seq
@@ -264,19 +231,16 @@ class PYMart:
 
             SeqIO.write(recs, "temp5.fasta", "fasta")
             new_seqs = {}
-            new_recs =[]
+            new_recs = []
             for seq in SeqIO.parse("temp5.fasta", "fasta"):
                 for key, value in transcript.items():
                     if seq.seq == str(value):
-                        print("Seq match")
                         new_seqs[key] = seq.seq
             for name1, seq1 in new_seqs.items():
                 print(name1)
                 new_rec = SeqRecord(Seq(str(seq1)), id=name1, description="")
                 new_recs.append(new_rec)
-
             SeqIO.write(new_recs, "final_trans.fasta", "fasta")
-
 
         print("Removing temp files...")
         os.remove("temp.fasta")
