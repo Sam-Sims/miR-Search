@@ -17,19 +17,19 @@ The mir-search pipeline consists of 4 modules:
 #### pymart:
 The pymart module allows you to download 3'UTR sequence data directly from biomart for a given subset of genes. It also cleans the 3'UTR data to remove unavailible sequence data and prepares it for direct use within mir-search module.
 
-#### mir-search
+#### mir-search:
 The mir-search module is used to identify all 6mer, 7mer and 8mer targets of a given micro-RNA
 
-#### icshape-align
+#### icshape-align:
 The icshape-align module takes the output from the mir-search module as well as SHAPE-Seq data and extracts structure scores for each nucleotide in the target region
 
-#### ggplot-format
+#### ggplot-format:
 ggplot-format is a helper module that takes the output from the mir-search or icshape-align module and parses the data in a way that allows for direct plotting with the R library, ggplot2
 
 
 # Usage
 
-#### pymart
+#### pymart:
     
 Usage: `python mir-search pymart -i "genelist" - o "output" -a`
 
@@ -37,7 +37,7 @@ Note: The genelist should be a csv file with the first column the ensembl gene I
 
 template.xml contains the xml request string. This currently obtains 3'UTR sequences (specified via: `<Attribute name = "3utr" />`).
 
-#### mir-search
+#### mir-search:
 
 Usage: `python mir-search mir-search -i -m input_mir_name input_utr.fasta`
 
