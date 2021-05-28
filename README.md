@@ -42,3 +42,9 @@ template.xml contains the xml request string. This currently obtains 3'UTR seque
 Usage: `python mir-search mir-search -i -m input_mir_name input_utr.fasta`
 
 Note: The -m flag specifies the input micro RNA name as seen on mirbank.
+
+#### icshape-align
+
+Usage: `mir-search icshape-align -s icshape_output -t mir_search_output -u UTR file -f 0`
+
+Note: The -f flag specifies the length of the flanking region to read
