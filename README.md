@@ -51,3 +51,10 @@ Note: The -m flag specifies the input micro RNA name as seen on mirbank.
 Usage: `mir-search icshape-align -s icshape_output -t mir_search_output -u UTR file -f 0`
 
 Note: The -f flag specifies the length of the flanking region to read
+
+#### rnafold
+
+Usage: `mir-search rnafold -t mir_search_output -u UTR file -f 30`
+
+Note: The -f flag specifies the length of the flanking region to read
+`
