@@ -29,7 +29,7 @@ ggplot-format is a helper module that takes the output from the mir-search or ic
 #### rna-fold:
 rna-fold is a module that implements the ViennaRNA Package to calculate the minimum free energy (MFE) structure for target site specified in the mir-search output. This takes the target site locations +/- a flanking region and pipes them to the RNAfold stdin, runs RNAfold and then captures the stdout. 
 
-Also prints the MFE structure in dot-bracket notation and its free energy to stdout as well as the partition function and the base pairing probability matrix.
+The stdout includes: minimum free energy (MFE) structure,  MFE structure in dot-bracket notation and its free energy to as well as the partition function and the base pairing probability matrix.
 # Usage
 
 #### pymart:
