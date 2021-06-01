@@ -6,13 +6,16 @@ mir-search is a pipeline devloped to examine and analyse the role of miRNA targe
 
 mir-search is a pipeline devloped as part of my MSc research project. It combines RNA-Seq data and [SHAPE-Seq](https://www.illumina.com/science/sequencing-method-explorer/kits-and-arrays/shape-seq.html) data in order to visualise the role that mRNA secondary structure has on miRNA mediated gene regulation.
 
+Furthermore the pipeline implements the ViennaRNA Package to calculate the minimum free energy (MFE) structure for specified target sites, to facilitate comparison to SHAPE-Seq data.
+
 mir-search is written in Python 3.8.
 
-The mir-search pipeline consists of 4 modules:
+The mir-search pipeline consists of 5 modules:
 - pymart
 - mir-search
 - icshape-align
 - ggplot-format
+- rnafold
 
 #### pymart:
 The pymart module allows you to download 3'UTR sequence data directly from biomart for a given subset of genes. It also cleans the 3'UTR data to remove unavailible sequence data and prepares it for direct use within mir-search module.
