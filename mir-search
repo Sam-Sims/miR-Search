@@ -3,7 +3,7 @@ import argparse
 import os, sys
 import pickle
 
-from modules import pymart, ggplot_builder as pb, sequence_handler, targetsearch, icshapeProcess as sp
+from modules import pymart, ggplot_builder as pb, sequence_handler, targetsearch, icshape_process as sp, rnafold
 
 v_print = None
 
@@ -32,6 +32,7 @@ def init_argparse():
     search_parser = subparsers.add_parser('mir-search')
     format_parser = subparsers.add_parser('ggplot-format')
     process_parser = subparsers.add_parser('icshape-align')
+    rnafold_parser = subparsers.add_parser('rnafold')
 
     # PYMART ARGS
     # parser.add_argument("-d", "--download", help="Runs the pymart downloader. Requires --input.", action="store_true")
@@ -99,7 +100,27 @@ def init_argparse():
     process_parser.add_argument("-m", "--match",
                                 help="Generates a new FASTA file containg only UTR sequences for that have shape coverage for. Takes UTR file from pymart as input - run icshape-align --ret first.",
                                 required=False)
+    process_parser.add_argument("-o", "--output", help="Location of output file")
+    process_parser.add_argument("-f", "--flank", help="Size of flank upstream and downstream", default=0)
 
+    # rnafold ARGS
+    rnafold_parser.add_argument("-t", "--target",
+                                help="Specifies target input file.",
+                                required=False)
+    rnafold_parser.add_argument("-u", "--utr",
+                                help="Specifies utr input file.",
+                                required=False)
+    rnafold_parser.add_argument("-f", "--flank",
+                                help="Size of flank upstream and downstream", default=0,
+                                required=False)
+    rnafold_parser.add_argument("-s", "--sleuth",
+                                help="Sleuth input file",
+                                required=False)
+    rnafold_parser.add_argument("-o", "--output",
+                                help="Specifies output file.",
+                                required=False)
+    rnafold_parser.add_argument('-v', '--verbosity', action="count",
+                                help="increase output verbosity (e.g., -vv is more than -v)")
 
     args = parser.parse_args()
     return args
@@ -153,7 +174,7 @@ def run_search(args):
 
 
 def run_pymart(args):
-    pm = pymart.PYMart(args.url, args.input, args.output, args.split, args.mir)
+    pm = pymart.PYMart(args.url, args.input, args.output, args.split, v_print)
     if args.scrub:
         pm.clean_utr(args.scrub)
     elif args.verify:
@@ -193,21 +214,19 @@ def run_format(args):
         print("Error - mode not supplied. Use -t or -s to specify a mode. -h for more information")
         sys.exit()
 
+def run_rnafold(args):
+    dict_of_targets = sp.return_target_dicts(args.target) # use same function as icshape align to return all targets of a mir
+    hashed_utr = sp.return_hashed_utr(args.utr) # borrow UTR hashing from icshape align
+    energy_scores = rnafold.run_fold(dict_of_targets, hashed_utr, args.flank) # tuple containing dict of target id and location 0=6, 1=7a1, 2=7m8, 3=8
+    percentages = rnafold.return_percentage(energy_scores)
+    sleuth = pb.prepare_sleuth_results_rnafold(args.sleuth)
+    energy = pb.prepare_rnafold_data(percentages)
+    pb.merge_rnafold(sleuth, energy, args.output)
+
+
 
 def main():
     args = init_argparse()
-    if args.command == "pymart":
-        run_pymart(args)
-    elif args.command == "mir-search":
-        run_search(args)
-    elif args.command == "ggplot-format":
-        run_format(args)
-    elif args.command == "icshape-align":
-        run_process(args)
-    else:
-        print("Please specify a module to run. miR-Search -h for more details")
-        sys.exit()
-
     if args.verbosity:  # if verbose the define print function use v_print(level, string) level =1 info, 2=warn, 3=error
         def _v_print(*verb_args):
             if verb_args[0] > (3 - args.verbosity):
@@ -217,6 +236,19 @@ def main():
 
     global v_print
     v_print = _v_print
+    if args.command == "pymart":
+        run_pymart(args)
+    elif args.command == "mir-search":
+        run_search(args)
+    elif args.command == "ggplot-format":
+        run_format(args)
+    elif args.command == "icshape-align":
+        run_process(args)
+    elif args.command == "rnafold":
+        run_rnafold(args)
+    else:
+        print("Please specify a module to run. miR-Search -h for more details")
+        sys.exit()
 
 
 if __name__ == "__main__":
