@@ -110,8 +110,60 @@ def merge_shape(sleuth, shape, output):
     final_df = pd.concat([merge_top, merge_bot, merge_sleuth])
     final_df.rename(columns={"shape_score": "type"}, inplace=True)
     print(final_df)
-    if not os.path.exists('ggplot_format_output_shape'):
-        os.makedirs('ggplot_format_output_shape')
-    filename = str("ggplot_format_output_shape/" + output)
+    if not os.path.exists('ggplot_format_output_shape_flank'):
+        os.makedirs('ggplot_format_output_shape_flank')
+    filename = str("ggplot_format_output_shape_flank/" + output)
     final_df.to_csv(filename, index=False)
+
+def prepare_sleuth_results_rnafold(sleuth_results):
+    df = pd.read_csv(sleuth_results)
+    df = df.drop(df.columns[[0, 4, 5, 7, 8, 9, 10, 11, 12]], axis=1)
+    return df
+
+def prepare_rnafold_data(energy_dict):
+    combined_df_top = pd.DataFrame(columns=['transcript', 'energy_score'])
+    combined_df_bot = pd.DataFrame(columns=['transcript', 'energy_score'])
+    for key, value in energy_dict.items():
+        print("Reading ", key)
+        top = value.get("top")
+        bot = value.get("bot")
+        df_top = pd.DataFrame(top.items(), columns=['transcript', 'energy_score'])
+        df_bot = pd.DataFrame(bot.items(), columns=['transcript', 'energy_score'])
+        combined_df_top = combined_df_top.append(df_top)
+        combined_df_bot = combined_df_bot.append(df_bot)
+    return combined_df_top, combined_df_bot
+
+def merge_rnafold(sleuth, energy, output):
+    merge_top = pd.merge(sleuth, energy[0], left_on='target_id', right_on='transcript', how='inner')
+    merge_top = merge_top[merge_top['b'].notna()]
+    merge_bot = pd.merge(sleuth, energy[1], left_on='target_id', right_on='transcript', how='inner')
+    merge_bot = merge_bot[merge_bot['b'].notna()]
+    merge_top['energy_score'] = "High Structured (Top 20%) N = " + str(len(merge_top)) +")"
+    merge_bot['energy_score'] = "Low Structured (Bottom 20%) N = " + str(len(merge_bot)) + ")"
+    print(merge_top)
+    print(merge_bot)
+
+    merge_sleuth = sleuth[~sleuth.target_id.isin(merge_top.target_id)]
+    merge_sleuth = merge_sleuth[~merge_sleuth.target_id.isin(merge_bot.target_id)]
+    merge_sleuth = merge_sleuth[merge_sleuth['b'].notna()]
+    merge_sleuth['final_sigma_sq'] = 'non-targets (N= ' + str(len(merge_sleuth)) + ")"
+    merge_sleuth.rename(columns={"final_sigma_sq": "energy_score"}, inplace=True)
+
+
+    merge_top = merge_top.drop(merge_top.columns[[0, 1, 2, 4, 5]], axis=1)
+    merge_bot = merge_bot.drop(merge_bot.columns[[0, 1, 2, 4, 5]], axis=1)
+    merge_sleuth = merge_sleuth.drop(merge_sleuth.columns[[0, 1, 2]], axis=1)
+    print(merge_top)
+    print(merge_bot)
+    print(merge_sleuth)
+    final_df = pd.concat([merge_top, merge_bot, merge_sleuth])
+    final_df.rename(columns={"shape_score": "type"}, inplace=True)
+    print(final_df)
+
+    if not os.path.exists('RNA_fold_out'):
+        os.makedirs('RNA_fold_out')
+    filename = str("RNA_fold_out/" + output)
+    final_df.to_csv(filename, index=False)
+
+
 
