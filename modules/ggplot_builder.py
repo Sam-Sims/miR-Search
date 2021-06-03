@@ -142,8 +142,10 @@ def merge_rnafold(sleuth, energy, output):
     merge_bot['energy_score'] = "Low Structured (Bottom 20%) N = " + str(len(merge_bot)) + ")"
     print(merge_top)
     print(merge_bot)
+    trans_df = pd.read_csv("transcipts_with_shape_data.txt")
+    merge_sleuth = pd.merge(sleuth, trans_df, left_on='target_id', right_on='transcripts', how='inner')
 
-    merge_sleuth = sleuth[~sleuth.target_id.isin(merge_top.target_id)]
+    merge_sleuth = merge_sleuth[~merge_sleuth.target_id.isin(merge_top.target_id)]
     merge_sleuth = merge_sleuth[~merge_sleuth.target_id.isin(merge_bot.target_id)]
     merge_sleuth = merge_sleuth[merge_sleuth['b'].notna()]
     merge_sleuth['final_sigma_sq'] = 'non-targets (N= ' + str(len(merge_sleuth)) + ")"
@@ -153,6 +155,7 @@ def merge_rnafold(sleuth, energy, output):
     merge_top = merge_top.drop(merge_top.columns[[0, 1, 2, 4, 5]], axis=1)
     merge_bot = merge_bot.drop(merge_bot.columns[[0, 1, 2, 4, 5]], axis=1)
     merge_sleuth = merge_sleuth.drop(merge_sleuth.columns[[0, 1, 2]], axis=1)
+    merge_sleuth = merge_sleuth.drop(merge_sleuth.columns[[2]], axis=1)
     print(merge_top)
     print(merge_bot)
     print(merge_sleuth)
@@ -165,5 +168,38 @@ def merge_rnafold(sleuth, energy, output):
     filename = str("RNA_fold_out/" + output)
     final_df.to_csv(filename, index=False)
 
+def combine(shape, rnafold, output):
+    df_shape = pd.read_csv(shape)
+    df_energy = pd.read_csv(rnafold)
+    df_energy.rename(columns={"energy_score": "type"}, inplace=True)
+    print(df_shape)
+    print(df_energy)
+    # Rename computational data
+    high_name = df_energy['type'][1]
+    df_energy.loc[df_energy['type'].str.contains('High Structured'), 'type'] = high_name + "(Computational)"
+    low = df_energy.type.str.contains('Low Structured').idxmax()
+    low_name = df_energy.iloc[low, 1]
+    df_energy.loc[df_energy['type'].str.contains('Low Structured'), 'type'] = low_name + "(Computational)"
+    non = df_shape.type.str.contains('non-targets').idxmax()
+    non_name = df_shape.iloc[non, 1]
+    df_energy = df_energy[~df_energy.type.str.contains("non-targets")]
+    print(df_energy)
+    #Rename SHAPE data
+    high_name = df_shape['type'][1]
+    df_shape.loc[df_shape['type'].str.contains('High Structured'), 'type'] = high_name + "(Shape)"
+    low = df_shape.type.str.contains('Low Structured').idxmax()
+    low_name = df_shape.iloc[low, 1]
+    df_shape.loc[df_shape['type'].str.contains('Low Structured'), 'type'] = low_name + "(Shape)"
+    non = df_shape.type.str.contains('non-targets').idxmax()
+    non_name = df_shape.iloc[non, 1]
+    df_shape.loc[df_shape['type'].str.contains('non-targets'), 'type'] = non_name + "(Shape)"
+    print(df_shape)
+    final_df = pd.concat([df_energy, df_shape])
+    #final_df.rename(columns={"shape_score": "type"}, inplace=True)
+    print(final_df)
+    if not os.path.exists('RNA_fold_out_combined'):
+        os.makedirs('RNA_fold_out_combined')
+    filename = str("RNA_fold_out_combined/" + output)
+    final_df.to_csv(filename, index=False)
 
 

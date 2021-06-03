@@ -81,7 +81,8 @@ def init_argparse():
     format_parser.add_argument("-o", "--output", help="Specifies the location of the output file",
                                default="out.csv", required=False)
     format_parser.add_argument("-s", "--shape", help="Runs the module in shape mode - to process the output from the icshape-align module. First: sleuth results; Second: icshape-align output. Files in CSV format.", required=False, nargs=2, metavar=("sleuth", "icshape-align"))
-
+    format_parser.add_argument("-c", "--combine", help="Combines icshape and rnafold data for one chart",
+                               nargs=2, metavar=("icshape", "rnafold"), required=False)
     # icSHAPE-align ARGS
     process_parser.add_argument("-s", "--shape",
                                help="Specifies icSHAPE input file.",
@@ -210,6 +211,8 @@ def run_format(args):
         sleuth = pb.prepare_sleuth_results(args.input[0])
         targets = pb.prepare_targets(args.input[1])
         pb.merge(sleuth, targets, args.output)
+    elif args.combine:
+        pb.combine(args.combine[0], args.combine[1], args.output)
     else:
         print("Error - mode not supplied. Use -t or -s to specify a mode. -h for more information")
         sys.exit()
