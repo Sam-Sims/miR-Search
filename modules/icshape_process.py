@@ -227,6 +227,19 @@ def auto_process(args):
     #sys.stdout = open(filename_sysout, "a")
     sys.stdout.close()
 
+
+def return_all_shape_targets(args):
+    targetdf = prepare_targets(args.target)
+    shape_dict = process_target_shape_data(args.shape, targetdf, args.utr, args.flank)
+    cleaned_dict = sanitise_shape_scores(shape_dict)
+    combined_dict = calculate_combined_shape_score(cleaned_dict, "avr")
+    filename = "icshape-align_out_all/" + args.target.split("/")[1][:-4] + ".pickle"
+    if not os.path.exists('icshape-align_out_all'):
+        os.makedirs('icshape-align_out_all')
+    with open(filename, 'wb') as handle:
+        pickle.dump(combined_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
 def return_target_dicts(target_file):
     target_df = prepare_targets(target_file)
     dict_6mer = _return_dict(target_df, "6mer")
