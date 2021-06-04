@@ -120,6 +120,13 @@ def prepare_sleuth_results_rnafold(sleuth_results):
     df = df.drop(df.columns[[0, 4, 5, 7, 8, 9, 10, 11, 12]], axis=1)
     return df
 
+def prepare_rnafold_data_subset(energy_dict):
+    top = energy_dict.get("top")
+    bot = energy_dict.get("bot")
+    df_top = pd.DataFrame(top.items(), columns=['transcript', 'energy_score'])
+    df_bot = pd.DataFrame(bot.items(), columns=['transcript', 'energy_score'])
+    return df_top, df_bot
+
 def prepare_rnafold_data(energy_dict):
     combined_df_top = pd.DataFrame(columns=['transcript', 'energy_score'])
     combined_df_bot = pd.DataFrame(columns=['transcript', 'energy_score'])
@@ -138,30 +145,25 @@ def merge_rnafold(sleuth, energy, output):
     merge_top = merge_top[merge_top['b'].notna()]
     merge_bot = pd.merge(sleuth, energy[1], left_on='target_id', right_on='transcript', how='inner')
     merge_bot = merge_bot[merge_bot['b'].notna()]
+    print(merge_bot)
+    print(merge_top)
     merge_top['energy_score'] = "High Structured (Top 20%) N = " + str(len(merge_top)) +")"
     merge_bot['energy_score'] = "Low Structured (Bottom 20%) N = " + str(len(merge_bot)) + ")"
-    print(merge_top)
-    print(merge_bot)
     trans_df = pd.read_csv("transcipts_with_shape_data.txt")
     merge_sleuth = pd.merge(sleuth, trans_df, left_on='target_id', right_on='transcripts', how='inner')
-
     merge_sleuth = merge_sleuth[~merge_sleuth.target_id.isin(merge_top.target_id)]
     merge_sleuth = merge_sleuth[~merge_sleuth.target_id.isin(merge_bot.target_id)]
     merge_sleuth = merge_sleuth[merge_sleuth['b'].notna()]
     merge_sleuth['final_sigma_sq'] = 'non-targets (N= ' + str(len(merge_sleuth)) + ")"
     merge_sleuth.rename(columns={"final_sigma_sq": "energy_score"}, inplace=True)
-
-
     merge_top = merge_top.drop(merge_top.columns[[0, 1, 2, 4, 5]], axis=1)
     merge_bot = merge_bot.drop(merge_bot.columns[[0, 1, 2, 4, 5]], axis=1)
     merge_sleuth = merge_sleuth.drop(merge_sleuth.columns[[0, 1, 2]], axis=1)
     merge_sleuth = merge_sleuth.drop(merge_sleuth.columns[[2]], axis=1)
-    print(merge_top)
-    print(merge_bot)
-    print(merge_sleuth)
+    #print(merge_sleuth)
     final_df = pd.concat([merge_top, merge_bot, merge_sleuth])
     final_df.rename(columns={"shape_score": "type"}, inplace=True)
-    print(final_df)
+    #print(final_df)
 
     if not os.path.exists('RNA_fold_out'):
         os.makedirs('RNA_fold_out')

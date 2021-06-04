@@ -4,7 +4,6 @@ import re
 from operator import itemgetter
 
 
-
 def calc_location(value, flank): # messy parsing of the location as it is read as a string not list
     target_start_utr = int(value.split(",")[0][1:])
     target_start_utr = target_start_utr - int(flank)  # flank region downstream
@@ -14,6 +13,7 @@ def calc_location(value, flank): # messy parsing of the location as it is read a
     target_end_utr = int(target_end_utr_temp[:-1])
     target_end_utr = target_end_utr + int(flank)  # add flank region upstream
     return target_start_utr, target_end_utr
+
 
 def call_rna_fold(stdin):
     str_stdin = str(stdin)
@@ -26,6 +26,7 @@ def call_rna_fold(stdin):
     #pattern = "(\d+(?:\.\d+)?)" # regex patern to find all decimal numbers
     #result = re.findall(pattern, str(stdout_data))
     return result[0]
+
 
 def return_percentage(dict_to_process):
     combined_dict = {}
@@ -41,6 +42,60 @@ def return_percentage(dict_to_process):
         combined_dict[key] = temp_dict
     return combined_dict
 
+
+def return_percentage_subset(dict_to_process):
+    sorted_dict = dict(sorted(dict_to_process.items(), key=lambda item: item[1])) # sort dict low to high
+    n = int(len(sorted_dict) * 0.20) # calc 20% length of dict
+    bot_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1))[:n])
+    top_20 = dict(sorted(sorted_dict.items(), key=itemgetter(1), reverse=True)[:n])
+    combined_dict = {"top": top_20, "bot": bot_20}
+    return combined_dict
+
+
+def get_nested_keys(d, keys): # recursive function to retrieve all keys in a nested dictionary
+    for key, value in d.items():
+        if isinstance(value, dict):
+            get_nested_keys(value, keys)
+        else:
+            keys.append(key)
+    keys_list = []
+    return keys_list
+
+
+def return_shape_transcripts(shape_data):
+    keys_list = []
+    get_nested_keys(shape_data, keys_list)
+    return keys_list
+
+
+def subset_target_data(target_data, shape_transcripts):
+    flat_dict = {}
+    master_dict = {}
+    for i in target_data:
+        for key, value in i.items():
+            flat_dict[key] = value
+
+    for key, value in flat_dict.items():
+        for i in shape_transcripts:
+            if i in key:
+                master_dict[key] = value
+    return master_dict
+
+
+def run_fold_subset(dict_of_tagets, utr, flank):
+    energy_score_dict = {}
+    print("Flanking region set to: ", str(flank))
+    for key, value in dict_of_tagets.items():
+        print("Processing: ", key)
+        split_header = key.split("|")
+        utr_locations = calc_location(value, flank)
+        target_seq = utr.get(key)[utr_locations[0]:utr_locations[1]]
+        # rec = SeqRecord(Seq(str(target_seq)), id=key, description="")
+        # SeqIO.write(rec, "temp.fasta", "fasta")
+        free_energy = call_rna_fold(target_seq)
+        # print("Free energy: " + free_energy)
+        energy_score_dict[split_header[2]] = free_energy
+    return energy_score_dict
 
 
 def run_fold(dict_of_tagets, utr, flank):
