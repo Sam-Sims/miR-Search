@@ -124,6 +124,9 @@ def init_argparse():
     rnafold_parser.add_argument("--subset",
                                 help="Runs RNAfold in subset mode using SHAPE data as an input",
                                 required=False)
+    rnafold_parser.add_argument("--nopercent",
+                                help="Runs RNAfold without calculating the percentages",
+                                required=False, action="store_true")
     rnafold_parser.add_argument('-v', '--verbosity', action="count",
                                 help="increase output verbosity (e.g., -vv is more than -v)")
 
@@ -235,11 +238,18 @@ def run_rnafold(args):
         hashed_utr = sp.return_hashed_utr(args.utr)
         subset_targets = rnafold.subset_target_data(dict_of_targets, shape_transcripts)
         energy_scores = rnafold.run_fold_subset(subset_targets, hashed_utr, args.flank)
-        percentages = rnafold.return_percentage_subset(energy_scores)
-        print(percentages)
-        sleuth = pb.prepare_sleuth_results_rnafold(args.sleuth)
-        energy = pb.prepare_rnafold_data_subset(percentages)
-        pb.merge_rnafold(sleuth, energy, args.output)
+        if args.nopercent:
+            filename = "rnafold_out_all/" + args.output + ".pickle"
+            if not os.path.exists('rnafold_out_all'):
+                os.makedirs('rnafold_out_all')
+            with open(filename, 'wb') as handle:
+                pickle.dump(energy_scores, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        else:
+            percentages = rnafold.return_percentage_subset(energy_scores)
+            print(percentages)
+            sleuth = pb.prepare_sleuth_results_rnafold(args.sleuth)
+            energy = pb.prepare_rnafold_data_subset(percentages)
+            pb.merge_rnafold(sleuth, energy, args.output)
 
     else:
         dict_of_targets = sp.return_target_dicts(args.target) # use same function as icshape align to return all targets of a mir
