@@ -1,5 +1,5 @@
 import pandas as pd
-import os
+import os, pickle
 
 
 def prepare_sleuth_results(sleuth_results):
@@ -203,5 +203,50 @@ def combine(shape, rnafold, output):
         os.makedirs('RNA_fold_out_combined')
     filename = str("RNA_fold_out_combined/" + output)
     final_df.to_csv(filename, index=False)
+
+def unpickle(file):
+    with open(file, 'rb') as handle:
+        file_to_ret = pickle.load(handle)
+    handle.close()
+    return file_to_ret
+
+def flattern_dict(dict):
+    flat_dict = {}
+    for key, value in dict.items():
+        for k, v in value.items():
+            flat_dict[k] = v
+    return flat_dict
+
+def compare_lists(shape_df, rnafold_df):
+    shape_list = shape_df["transcript"].tolist()
+    rnafold_list = rnafold_df["transcript"].tolist()
+    return set(shape_list) == set(rnafold_list)
+
+def spearmans_output(shape_data, rnafold_data, output):
+    print("test")
+    shape_data = unpickle(shape_data)
+    rnafold_data = unpickle(rnafold_data)
+    shape_data = flattern_dict(shape_data)
+
+    df_shape = pd.DataFrame(shape_data.items(), columns=['transcript', 'shape_score'])
+    df_rnafold = pd.DataFrame(rnafold_data.items(), columns=['transcript', 'rnafold_score'])
+    print(df_rnafold)
+    print(df_shape)
+    if compare_lists(df_shape, df_rnafold):
+        print("List check passed!")
+        merge_df = pd.merge(df_shape, df_rnafold, left_on='transcript', right_on='transcript', how='inner')
+        print(merge_df)
+        if not os.path.exists('ggplot_stats'):
+            os.makedirs('ggplot_stats')
+        filename = str("ggplot_stats/" + output)
+        merge_df.to_csv(filename, index=False)
+        print("Done!")
+        print("Target file saved as ggplot_stats/", output, ".csv")
+    else:
+        print("List check failed - check data")
+
+
+
+
 
 
