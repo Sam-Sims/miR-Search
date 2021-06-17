@@ -14,11 +14,20 @@ def calc_location(value, flank):  # messy parsing of the location as it is read 
     return target_start_utr_flank, target_end_utr_flank, target_start_utr, target_end_utr
 
 
+def call_rna_cofold(stdin):
+    str_stdin = str(stdin)
+    p = Popen(['RNAcofold'], stdout=PIPE, stdin=PIPE, stderr=PIPE)  # run RNA cofold and pipe stdout
+    stdout_data = p.communicate(input=str_stdin.encode())[0]
+    pattern = "\(([^)]*)\)[^(]*$"  # regex to match the number in the last bracket of a string
+    result = re.findall(pattern, str(stdout_data))
+    return result[0]
+
+
 def call_rna_fold(stdin):
     str_stdin = str(stdin)
     p = Popen(['RNAfold', '-d2', '--noLP'], stdout=PIPE, stdin=PIPE, stderr=PIPE)  # run RNA fold and pipe stdout
     stdout_data = p.communicate(input=str_stdin.encode())[0]
-    print(stdout_data)
+    #print(stdout_data)
 
     # Regex to extract dot bracket notation from stdout
     dot_bracket_pattern = "n(.*)"
@@ -89,8 +98,9 @@ def subset_target_data(target_data, shape_transcripts):
     return master_dict
 
 
-def run_fold_subset(dict_of_targets, utr, flank):
+def run_fold_subset(dict_of_targets, utr, flank, cofold):
     energy_score_dict = {}
+    energy_score_cofold = {}
     print("Flanking region set to: ", str(flank))
     counter = 0
     for key, value in dict_of_targets.items():
@@ -99,17 +109,25 @@ def run_fold_subset(dict_of_targets, utr, flank):
         utr_locations = calc_location(value, flank)
         target_seq = utr.get(key)[utr_locations[0]:utr_locations[1]]
         seed = utr.get(key)[utr_locations[2]:utr_locations[3]]
-        print("SEED: ", seed)
+        #print("SEED: ", seed)
         seed = str(seed)
         # rec = SeqRecord(Seq(str(target_seq)), id=key, description="")
         # SeqIO.write(rec, "temp.fasta", "fasta")
 
         free_energy = call_rna_fold(target_seq)
         # print("Free energy: " + free_energy)
-        paired_structure = prep_cofold(free_energy[1], target_seq, seed)
-        energy_score_dict[split_header[2]] = free_energy[0]
-    print("COUNTER: ", counter)
-    return energy_score_dict
+        if cofold:
+            cofold_string = prep_cofold(free_energy[1], target_seq, seed)
+            print("COFOLD STRING", cofold_string)
+            cofold_energy = call_rna_cofold(cofold_string)
+            energy_score_cofold[split_header[2]] = cofold_energy
+        else:
+            energy_score_dict[split_header[2]] = free_energy[0]
+    #print("COUNTER: ", counter)
+    if cofold:
+        return energy_score_cofold
+    else:
+        return energy_score_dict
 
 
 def process_dot_bracket(dot_bracket):
@@ -125,7 +143,7 @@ def process_dot_bracket(dot_bracket):
     return pairs
 
 def match_sequence(pairing_table, sequence):
-    print(sequence)
+    #print(sequence)
     paired_dict = {}
     for count, char in enumerate(sequence):
         if count in pairing_table.keys():
@@ -145,7 +163,7 @@ def find_seed(seed, target_seq):
     return seed_locations
 
 
-def match_paired_only(match_list, dot_bracket):
+def match_unpaired(match_list, dot_bracket, length):
     '''
     index_start = 0
     forward = False
@@ -156,7 +174,8 @@ def match_paired_only(match_list, dot_bracket):
             if char != "N":
                 index_start = count
     '''
-    print("DOT", dot_bracket)
+    #print("DOT", dot_bracket)
+    #print(match_list)
     n = len(match_list)
     if all(elem == match_list[0] for elem in match_list): # if all elements match aka all bases have N aka all bases unpaired
         print("NO PAIRS") # do nothing
@@ -166,7 +185,7 @@ def match_paired_only(match_list, dot_bracket):
                 for j in range (n-1):
                     if isinstance(match_list[j], int) and match_list[j + 1] == "N":
                         if match_list[j] - 1 in match_list:
-                            print("Bulge?")
+                            #print("Bulge?")
                             match_list[j + 1] = match_list[j] - 1
                             match_list[match_list.index(match_list[j] - 1)] = 'N'
                         else:
@@ -176,26 +195,32 @@ def match_paired_only(match_list, dot_bracket):
                                 match_list[j + 1] = match_list[j] - 1
                     elif match_list[j] == "N" and isinstance(match_list[j + 1], int):
                         if match_list[j + 1] + 1 in match_list:
-                            print("bulge?")
+                            #print("bulge?")
                             match_list[j] = match_list[j + 1] + 1
                             match_list[match_list.index(match_list[j + 1] + 1)] = 'N'
                         else:
-                            match_list[j] = match_list[j + 1] + 1
+                            if match_list[j + 1] + 1 > length - 1:
+                                match_list[j] = length - 1
+                            else:
+                                match_list[j] = match_list[j + 1] + 1
         elif ")" in dot_bracket:
             match_list.reverse()
-            print("REV: ", match_list)
+            #print("REV: ", match_list)
             while "N" in match_list:
                 for j in range (n-1):
                     if isinstance(match_list[j], int) and match_list[j + 1] == "N":
                         if match_list[j] + 1 in match_list:
-                            print("Bulge?")
+                            #print("Bulge?")
                             match_list[j + 1] = match_list[j] + 1
                             match_list[match_list.index(match_list[j] + 1)] = 'N'
                         else:
-                            match_list[j + 1] = match_list[j] + 1
+                            if match_list[j] + 1 > length - 1:
+                                match_list[j + 1] = length - 1
+                            else:
+                                match_list[j + 1] = match_list[j] + 1
                     elif match_list[j] == "N" and isinstance(match_list[j + 1], int):
                         if match_list[j + 1] - 1 in match_list:
-                            print("bulge?")
+                            #print("bulge?")
                             match_list[j] = match_list[j + 1] - 1
                             match_list[match_list.index(match_list[j + 1] - 1)] = 'N'
                         else:
@@ -204,7 +229,8 @@ def match_paired_only(match_list, dot_bracket):
                             else:
                                 match_list[j] = match_list[j + 1] - 1
 
-    print("FIXED: ", match_list)
+    #print("FIXED: ", match_list)
+    return match_list
 
 
 
@@ -212,12 +238,12 @@ def match_paired_only(match_list, dot_bracket):
 
 
 def prep_cofold(dot_bracket, target_seq, seed):
-    print(target_seq)
-    print(dot_bracket)
+    #print(target_seq)
+    #print(dot_bracket)
     target_seq = str(target_seq)
     seed_loc = find_seed(seed, target_seq)
     seed_dot_bracket = dot_bracket[seed_loc[0]:seed_loc[1]]
-    print(seed_dot_bracket)
+    #print(seed_dot_bracket)
     pairing_table = process_dot_bracket(dot_bracket)
     seq_match = match_sequence(pairing_table, target_seq)
     inverse_pairing_table = {v: k for k, v in pairing_table.items()}
@@ -239,8 +265,20 @@ def prep_cofold(dot_bracket, target_seq, seed):
                     match_list.append(match)
             elif char == ".":
                 match_list.append("N")
-        print(match_list)
-        match_paired_only(match_list, seed_dot_bracket)
+        paired_list = match_unpaired(match_list, seed_dot_bracket, len(target_seq))
+        #print("SEED", seed)
+        input1 = seed
+        paired_seq =[]
+        for i in match_list:
+            if i == "N":
+                break
+            else:
+                temp = target_seq[i]
+                paired_seq.append(temp)
+        input2 = ''.join(paired_seq)
+        final_string = input1 + "&" + input2
+        print(final_string)
+        return final_string
 
 
 
