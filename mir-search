@@ -129,6 +129,9 @@ def init_argparse():
     rnafold_parser.add_argument("--nopercent",
                                 help="Runs RNAfold without calculating the percentages",
                                 required=False, action="store_true")
+    rnafold_parser.add_argument("--cofold",
+                                help="Runs RNAcofold instead",
+                                required=False, action="store_true")
     rnafold_parser.add_argument('-v', '--verbosity', action="count",
                                 help="increase output verbosity (e.g., -vv is more than -v)")
 
@@ -241,7 +244,7 @@ def run_rnafold(args):
         dict_of_targets = sp.return_target_dicts(args.target)
         hashed_utr = sp.return_hashed_utr(args.utr)
         subset_targets = rnafold.subset_target_data(dict_of_targets, shape_transcripts)
-        energy_scores = rnafold.run_fold_subset(subset_targets, hashed_utr, args.flank)
+        energy_scores = rnafold.run_fold_subset(subset_targets, hashed_utr, args.flank, args.cofold)
         if args.nopercent:
             filename = "rnafold_out_all/" + args.output + ".pickle"
             if not os.path.exists('rnafold_out_all'):
